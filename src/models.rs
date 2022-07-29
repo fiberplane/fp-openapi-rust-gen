@@ -33,7 +33,9 @@ fn generate_model(name: &str, object: &SchemaObject, writer: &mut BufWriter<File
         for (id, schema) in &object_validation.properties {
             match schema {
                 Schema::Bool(_) => unimplemented!("bool is not implemented for schema"),
-                Schema::Object(schema_object) => generate_field(id, schema_object, &object_validation.required, writer)?
+                Schema::Object(schema_object) => {
+                    generate_normal_field(id, schema_object, &object_validation.required, writer)?
+                }
             }
         }
     } else {
@@ -45,7 +47,7 @@ fn generate_model(name: &str, object: &SchemaObject, writer: &mut BufWriter<File
     Ok(())
 }
 
-fn generate_field(name: &str, schema: &SchemaObject, required_list: &Set<String>, writer: &mut BufWriter<File>) -> Result<()> {
+fn generate_normal_field(name: &str, schema: &SchemaObject, required_list: &Set<String>, writer: &mut BufWriter<File>) -> Result<()> {
     write!(writer, "    #[serde(rename = \"{}\")]\n", name)?;
 
     let mut snake_name = name.to_case(Case::Snake);
@@ -62,24 +64,28 @@ fn generate_field(name: &str, schema: &SchemaObject, required_list: &Set<String>
         write!(writer, "Option<")?;
     }
 
-    if let Some(SingleOrVec::Single(instance_type)) = &schema.instance_type {
-        match **instance_type {
-            InstanceType::Null => write!(writer, "()")?,
-            InstanceType::Boolean => write!(writer, "bool")?,
-            InstanceType::Object => write!(writer, "std::collections::HashMap<String, String>")?,
-            InstanceType::Array => write!(writer, "Vec<serde_json::Value>")?,
-            InstanceType::Number => write!(writer, "i64")?,
-            InstanceType::String => write!(writer, "String")?,
-            InstanceType::Integer => write!(writer, "i32")?,
-        }
-    } else if let Some(reference) = &schema.reference {
-        if let Some((_, reference_name)) = reference.rsplit_once('/') {
-            write!(writer, "crate::models::{}", reference_name.to_case(Case::Pascal))?;
+    match schema.format.as_deref() {
+        Some("base64uuid") => write!(writer, "base64uuid::Base64Uuid")?,
+        Some("date-time") => write!(writer, "time::OffsetDateTime")?,
+        Some(_) | None => if let Some(SingleOrVec::Single(instance_type)) = &schema.instance_type {
+            match **instance_type {
+                InstanceType::Null => write!(writer, "()")?,
+                InstanceType::Boolean => write!(writer, "bool")?,
+                InstanceType::Object => write!(writer, "std::collections::HashMap<String, String>")?,
+                InstanceType::Array => write!(writer, "Vec<serde_json::Value>")?,
+                InstanceType::Number => write!(writer, "i64")?,
+                InstanceType::String => write!(writer, "String")?,
+                InstanceType::Integer => write!(writer, "i32")?,
+            }
+        } else if let Some(reference) = &schema.reference {
+            if let Some((_, reference_name)) = reference.rsplit_once('/') {
+                write!(writer, "crate::models::{}", reference_name.to_case(Case::Pascal))?;
+            } else {
+                write!(writer, "crate::models::{}", reference.to_case(Case::Pascal))?;
+            }
         } else {
-            write!(writer, "crate::models::{}", reference.to_case(Case::Pascal))?;
+            bail!("Failed to write field {}. Schema: {:?}", name, schema);
         }
-    } else {
-        bail!("Failed to write field {}. Schema: {:?}", name, schema);
     }
 
     if !required {
