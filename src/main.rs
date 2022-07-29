@@ -4,7 +4,6 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use okapi::openapi3::OpenApi;
-use crate::parsing::OpenApiDocument;
 
 mod generator;
 

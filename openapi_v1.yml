@@ -13,15 +13,15 @@ servers:
         default: dev
         description: Environment
 components:
-  securitySchemes:
-    userToken:
-      type: http
-      scheme: bearer
-    serviceToken:
-      type: apiKey
-      in: header
-      name: fp-service-auth-token
-      description: JWT used for authentication between services
+  #securitySchemes:
+    #userToken:
+    #type: http
+    #scheme: bearer
+    #serviceToken:
+    #  type: apiKey
+    #  in: header
+    #  name: fp-service-auth-token
+    #  description: JWT used for authentication between services
   schemas:
     newNotebook:
       type: object

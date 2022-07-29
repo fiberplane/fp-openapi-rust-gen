@@ -1,7 +1,6 @@
 use std::path::Path;
 use anyhow::Result;
 use okapi::openapi3::OpenApi;
-use crate::OpenApiDocument;
 
 pub(crate) fn generate_crate(document: OpenApi, path: &Path) -> Result<()> {
     unimplemented!()
