@@ -1,0 +1,2731 @@
+---
+openapi: "3.0.3"
+info:
+  title: Fiberplane API
+  version: "1.0"
+servers:
+  - url: https://fiberplane.com/
+    description: Production servers
+  - url: https://{env}.fiberplane.io/
+    description: Non-production servers
+    variables:
+      env:
+        default: dev
+        description: Environment
+components:
+  securitySchemes:
+    userToken:
+      type: http
+      scheme: bearer
+    serviceToken:
+      type: apiKey
+      in: header
+      name: fp-service-auth-token
+      description: JWT used for authentication between services
+  schemas:
+    newNotebook:
+      type: object
+      required:
+        - title
+        - timeRange
+        - cells
+      properties:
+        title:
+          type: string
+        timeRange:
+          $ref: "#/components/schemas/timeRange"
+        cells:
+          type: array
+          items:
+            $ref: "#/components/schemas/cell"
+        dataSources:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/notebookDataSource"
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/label"
+    cell:
+      oneOf:
+        - $ref: "#/components/schemas/checkboxCell"
+        - $ref: "#/components/schemas/codeCell"
+        - $ref: "#/components/schemas/dividerCell"
+        - $ref: "#/components/schemas/elasticsearchCell"
+        - $ref: "#/components/schemas/graphCell"
+        - $ref: "#/components/schemas/headingCell"
+        - $ref: "#/components/schemas/imageCell"
+        - $ref: "#/components/schemas/listItemCell"
+        - $ref: "#/components/schemas/logCell"
+        - $ref: "#/components/schemas/lokiCell"
+        - $ref: "#/components/schemas/prometheusCell"
+        - $ref: "#/components/schemas/providerCell"
+        - $ref: "#/components/schemas/tableCell"
+        - $ref: "#/components/schemas/textCell"
+      discriminator:
+        propertyName: type
+        mapping:
+          checkbox: "#/components/schemas/checkboxCell"
+          code: "#/components/schemas/codeCell"
+          divider: "#/components/schemas/dividerCell"
+          elasticsearch: "#/components/schemas/elasticsearchCell"
+          graph: "#/components/schemas/graphCell"
+          heading: "#/components/schemas/headingCell"
+          image: "#/components/schemas/imageCell"
+          list_item: "#/components/schemas/listItemCell"
+          log: "#/components/schemas/logCell"
+          loki: "#/components/schemas/lokiCell"
+          prometheus: "#/components/schemas/prometheusCell"
+          provider: "#/components/schemas/providerCell"
+          table: "#/components/schemas/tableCell"
+          text: "#/components/schemas/textCell"
+    cellType:
+      type: string
+      enum:
+        - checkbox
+        - code
+        - divider
+        - elasticsearch
+        - graph
+        - heading
+        - image
+        - list_item
+        - log
+        - loki
+        - prometheus
+        - provider
+        - table
+        - text
+    checkboxCell:
+      type: object
+      required:
+        - type
+        - id
+        - checked
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        checked:
+          type: boolean
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        level:
+          type: integer
+          format: int32
+        readOnly:
+          type: boolean
+    codeCell:
+      type: object
+      required:
+        - type
+        - id
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        content:
+          type: string
+        readOnly:
+          type: boolean
+        syntax:
+          type: string
+    dividerCell:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        readOnly:
+          type: boolean
+    graphCell:
+      type: object
+      required:
+        - type
+        - id
+        - graphType
+        - stackingType
+        - sourceIds
+        - title
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        graphType:
+          type: string
+          enum:
+            - bar
+            - line
+        stackingType:
+          type: string
+          enum:
+            - none
+            - stacked
+            - percentage
+        readOnly:
+          type: boolean
+        sourceIds:
+          type: array
+          items:
+            type: string
+        timeRange:
+          $ref: "#/components/schemas/timeRange"
+        title:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        data:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/series"
+    headingCell:
+      type: object
+      required:
+        - type
+        - id
+        - headingType
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        headingType:
+          type: string
+          enum:
+            - h1
+            - h2
+            - h3
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        readOnly:
+          type: boolean
+    listItemCell:
+      type: object
+      required:
+        - type
+        - id
+        - listType
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        listType:
+          type: string
+          enum:
+            - ordered
+            - unordered
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        level:
+          type: integer
+          format: int32
+        readOnly:
+          type: boolean
+        startNumber:
+          type: integer
+          format: int32
+    prometheusCell:
+      type: object
+      required:
+        - type
+        - id
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        content:
+          type: string
+        readOnly:
+          type: boolean
+    providerCell:
+      type: object
+      required:
+        - type
+        - id
+        - intent
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        intent:
+          type: string
+        queryData:
+          type: string
+        response:
+          $ref: "#/components/schemas/providerResponse"
+        output:
+          type: array
+          items:
+            $ref: "#/components/schemas/cell"
+        title:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        readOnly:
+          type: boolean
+    providerResponse:
+      type: object
+      required:
+        - data
+        - mimeType
+      properties:
+        data:
+          type: string
+        mimeType:
+          type: string
+    elasticsearchCell:
+      type: object
+      required:
+        - type
+        - id
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        content:
+          type: string
+        readOnly:
+          type: boolean
+    lokiCell:
+      type: object
+      required:
+        - type
+        - id
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        content:
+          type: string
+        readOnly:
+          type: boolean
+    tableCell:
+      type: object
+      required:
+        - type
+        - id
+        - sourceIds
+        - title
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        readOnly:
+          type: boolean
+        sourceIds:
+          type: array
+          items:
+            type: string
+        title:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        data:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/instant"
+    logCell:
+      type: object
+      required:
+        - type
+        - id
+        - sourceIds
+        - title
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        readOnly:
+          type: boolean
+        sourceIds:
+          type: array
+          items:
+            type: string
+        title:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        timeRange:
+          $ref: "#/components/schemas/timeRange"
+        data:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/logRecord"
+    textCell:
+      type: object
+      required:
+        - type
+        - id
+        - content
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        id:
+          type: string
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        readOnly:
+          type: boolean
+    imageCell:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          $ref: "#/components/schemas/cellType"
+        url:
+          type: string
+          format: uri
+        id:
+          type: string
+        fileId:
+          type: string
+        progress:
+          type: number
+          format: float
+        readOnly:
+          type: boolean
+        width:
+          type: integer
+          format: int32
+        height:
+          type: integer
+          format: int32
+        preview:
+          type: string
+    cellAppendText:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+    cellReplaceText:
+      type: object
+      required:
+        - offset
+        - newText
+        - oldText
+      properties:
+        offset:
+          type: integer
+          format: int32
+        newText:
+          type: string
+        newFormatting:
+          $ref: "#/components/schemas/formatting"
+        oldText:
+          type: string
+        oldFormatting:
+          $ref: "#/components/schemas/formatting"
+    notebook:
+      type: object
+      required:
+        - id
+        - revision
+        - title
+        - cells
+        - createdAt
+        - createdBy
+        - timeRange
+        - updatedAt
+        - labels
+      properties:
+        id:
+          type: string
+        revision:
+          type: integer
+        title:
+          type: string
+        cells:
+          type: array
+          items:
+            $ref: "#/components/schemas/cell"
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          $ref: "#/components/schemas/createdBy"
+        dataSources:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/notebookDataSource"
+        readOnly:
+          type: boolean
+        timeRange:
+          $ref: "#/components/schemas/timeRange"
+        updatedAt:
+          type: string
+          format: date-time
+        visibility:
+          $ref: "#/components/schemas/notebookVisibility"
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/label"
+    notebookPatch:
+      type: object
+      properties:
+        visibility:
+          $ref: "#/components/schemas/notebookVisibility"
+    notebookSummary:
+      type: object
+      required:
+        - id
+        - title
+        - createdAt
+        - createdBy
+        - updatedAt
+        - labels
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          $ref: "#/components/schemas/createdBy"
+        updatedAt:
+          type: string
+          format: date-time
+        visibility:
+          $ref: "#/components/schemas/notebookVisibility"
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/label"
+    notebookVisibility:
+      type: string
+      enum:
+        - public
+        - private
+    timeRange:
+      type: object
+      required:
+        - from
+        - to
+      properties:
+        from:
+          type: number
+          format: double
+        to:
+          type: number
+          format: double
+    formatting:
+      type: array
+      items:
+        $ref: "#/components/schemas/annotation"
+    annotation:
+      oneOf:
+        - $ref: "#/components/schemas/startBoldAnnotation"
+        - $ref: "#/components/schemas/endBoldAnnotation"
+        - $ref: "#/components/schemas/startCodeAnnotation"
+        - $ref: "#/components/schemas/endCodeAnnotation"
+        - $ref: "#/components/schemas/startHighlightAnnotation"
+        - $ref: "#/components/schemas/endHighlightAnnotation"
+        - $ref: "#/components/schemas/startItalicsAnnotation"
+        - $ref: "#/components/schemas/endItalicsAnnotation"
+        - $ref: "#/components/schemas/startLinkAnnotation"
+        - $ref: "#/components/schemas/endLinkAnnotation"
+        - $ref: "#/components/schemas/mentionAnnotation"
+        - $ref: "#/components/schemas/startStrikethroughAnnotation"
+        - $ref: "#/components/schemas/endStrikethroughAnnotation"
+        - $ref: "#/components/schemas/startUnderlineAnnotation"
+        - $ref: "#/components/schemas/endUnderlineAnnotation"
+      discriminator:
+        propertyName: type
+        mapping:
+          start_bold: "#/components/schemas/startBoldAnnotation"
+          end_bold: "#/components/schemas/endBoldAnnotation"
+          start_code: "#/components/schemas/startCodeAnnotation"
+          end_code: "#/components/schemas/endCodeAnnotation"
+          start_highlight: "#/components/schemas/startHighlightAnnotation"
+          end_highlight: "#/components/schemas/endHighlightAnnotation"
+          start_italics: "#/components/schemas/startItalicsAnnotation"
+          end_italics: "#/components/schemas/endItalicsAnnotation"
+          start_link: "#/components/schemas/startLinkAnnotation"
+          end_link: "#/components/schemas/endLinkAnnotation"
+          mention: "#/components/schemas/mentionAnnotation"
+          start_strikethrough: "#/components/schemas/startStrikethroughAnnotation"
+          end_strikethrough: "#/components/schemas/endStrikethroughAnnotation"
+          start_underline: "#/components/schemas/startUnderlineAnnotation"
+          end_underline: "#/components/schemas/endUnderlineAnnotation"
+    annotationType:
+      type: string
+      enum:
+        - start_bold
+        - end_bold
+        - start_code
+        - end_code
+        - start_highlight
+        - end_highlight
+        - start_italics
+        - end_italics
+        - start_link
+        - end_link
+        - mention
+        - start_strikethrough
+        - end_strikethrough
+        - start_underline
+        - end_underline
+    startBoldAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    endBoldAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    startCodeAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    endCodeAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    startHighlightAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    endHighlightAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    startItalicsAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    endItalicsAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    startLinkAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+        - url
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+        url:
+          type: "string"
+    endLinkAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    mentionAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+        - name
+        - userId
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+        name:
+          type: "string"
+        userId:
+          type: "string"
+    startStrikethroughAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    endStrikethroughAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    startUnderlineAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    endUnderlineAnnotation:
+      type: object
+      required:
+        - type
+        - offset
+      properties:
+        type:
+          $ref: "#/components/schemas/annotationType"
+        offset:
+          type: integer
+          format: int32
+    instant:
+      type: object
+      required:
+        - metric
+        - point
+      properties:
+        metric:
+          $ref: "#/components/schemas/metric"
+        point:
+          $ref: "#/components/schemas/point"
+    series:
+      type: object
+      required:
+        - metric
+        - points
+        - visible
+      properties:
+        metric:
+          $ref: "#/components/schemas/metric"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/point"
+        visible:
+          type: boolean
+    metric:
+      type: object
+      required:
+        - name
+        - labels
+      properties:
+        name:
+          type: string
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+    point:
+      type: object
+      required:
+        - timestamp
+        - value
+      properties:
+        timestamp:
+          type: number
+          format: double
+        value:
+          type: number
+          format: double
+    notebookDataSource:
+      oneOf:
+        - $ref: "#/components/schemas/inlineDataSource"
+        - $ref: "#/components/schemas/orgDataSource"
+      discriminator:
+        propertyName: type
+        mapping:
+          inline: "#/components/schemas/inlineDataSource"
+          organization: "#/components/schemas/orgDataSource"
+    inlineDataSource:
+      type: object
+      required:
+        - "dataSource"
+      properties:
+        dataSource:
+          $ref: "#/components/schemas/dataSource"
+    newOrgDataSource:
+      type: object
+      required:
+        - "name"
+        - "defaultDataSource"
+        - "dataSource"
+      properties:
+        name:
+          type: string
+        defaultDataSource:
+          type: boolean
+        dataSource:
+          $ref: "#/components/schemas/dataSource"
+    orgDataSource:
+      type: object
+      required:
+        - "id"
+        - "name"
+        - "defaultDataSource"
+        - "dataSource"
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        defaultDataSource:
+          type: boolean
+        dataSource:
+          $ref: "#/components/schemas/dataSource"
+    dataSource:
+      oneOf:
+        - $ref: "#/components/schemas/prometheusDataSource"
+        - $ref: "#/components/schemas/elasticsearchDataSource"
+        - $ref: "#/components/schemas/lokiDataSource"
+        - $ref: "#/components/schemas/proxyDataSource"
+      discriminator:
+        propertyName: type
+        mapping:
+          prometheus: "#/components/schemas/prometheusDataSource"
+          elasticsearch: "#/components/schemas/elasticsearchDataSource"
+          loki: "#/components/schemas/lokiDataSource"
+          proxy: "#/components/schemas/proxyDataSource"
+    dataSourceType:
+      type: string
+      enum:
+        - prometheus
+        - elasticsearch
+        - loki
+        - proxy
+    prometheusDataSource:
+      type: object
+      required:
+        - "type"
+        - "url"
+      properties:
+        type:
+          $ref: "#/components/schemas/dataSourceType"
+        url:
+          type: string
+    elasticsearchDataSource:
+      type: object
+      required:
+        - "type"
+        - "url"
+        - "timestampFieldNames"
+        - "bodyFieldNames"
+      properties:
+        type:
+          $ref: "#/components/schemas/dataSourceType"
+        url:
+          type: string
+        timestampFieldNames:
+          type: array
+          default: []
+          items:
+            type: string
+        bodyFieldNames:
+          type: array
+          default: []
+          items:
+            type: string
+    lokiDataSource:
+      type: object
+      required:
+        - "type"
+        - "url"
+      properties:
+        type:
+          $ref: "#/components/schemas/dataSourceType"
+        url:
+          type: string
+    proxyDataSource:
+      type: object
+      required:
+        - "type"
+        - "dataSourceType"
+        - "proxyId"
+        - "dataSourceName"
+      properties:
+        type:
+          $ref: "#/components/schemas/dataSourceType"
+        proxyId:
+          type: string
+        dataSourceName:
+          type: string
+        dataSourceType:
+          $ref: "#/components/schemas/dataSourceType"
+    fileSummary:
+      type: object
+      required:
+        - fileId
+      properties:
+        fileId:
+          type: string
+    uploadData:
+      description: "upload file payload"
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+    ProfileUploadData:
+      description: "upload file payload"
+      type: object
+      required:
+        - picture
+      properties:
+        picture:
+          type: string
+          format: binary
+    user:
+      type: object
+      required:
+        - "id"
+        - "name"
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+    newPinnedNotebook:
+      type: object
+      required:
+        - notebookId
+      properties:
+        notebookId:
+          type: string
+    newProxy:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    proxySummary:
+      type: object
+      required:
+        - id
+        - status
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/proxyConnectionStatus"
+    proxy:
+      type: object
+      required:
+        - id
+        - status
+        - name
+        - dataSources
+      properties:
+        id:
+          type: string
+        status:
+          $ref: "#/components/schemas/proxyConnectionStatus"
+        name:
+          type: string
+        token:
+          description: this will only be set when creating a new proxy
+          type: string
+        dataSources:
+          description: data-sources associated with this proxy
+          type: array
+          items:
+            $ref: "#/components/schemas/dataSourceSummary"
+    proxyConnectionStatus:
+      type: string
+      enum:
+        - connected
+        - disconnected
+    dataSourceConnectionStatus:
+      type: string
+      enum:
+        - connected
+        - error
+    queryType:
+      oneOf:
+        - $ref: "#/components/schemas/seriesQuery"
+        - $ref: "#/components/schemas/instantQuery"
+      discriminator:
+        propertyName: type
+        mapping:
+          series: "#/components/schemas/seriesQuery"
+          instant: "#/components/schemas/instantQuery"
+    seriesQuery:
+      type: object
+      required:
+        - type
+        - timeRange
+      properties:
+        type:
+          type: string
+        timeRange:
+          $ref: "#/components/schemas/timeRange"
+    instantQuery:
+      type: object
+      required:
+        - type
+        - time
+      properties:
+        type:
+          type: string
+        time:
+          type: number
+          format: double
+    dataSourceSummary:
+      type: object
+      required:
+        - name
+        - type
+        - status
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/dataSourceType"
+        status:
+          $ref: "#/components/schemas/dataSourceConnectionStatus"
+        errorMessage:
+          type: string
+    dataSourceAndProxySummary:
+      type: object
+      required:
+        - name
+        - type
+        - status
+        - proxy
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/dataSourceType"
+        status:
+          $ref: "#/components/schemas/dataSourceConnectionStatus"
+        errorMessage:
+          type: string
+        proxy:
+          $ref: "#/components/schemas/proxySummary"
+    template:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - body
+        - parameters
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        body:
+          type: string
+        parameters:
+          type: array
+          items:
+            $ref: "#/components/schemas/templateParameter"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    templateParameter:
+      oneOf:
+        - $ref: "#/components/schemas/stringTemplateParameter"
+        - $ref: "#/components/schemas/numberTemplateParameter"
+        - $ref: "#/components/schemas/booleanTemplateParameter"
+        - $ref: "#/components/schemas/objectTemplateParameter"
+        - $ref: "#/components/schemas/arrayTemplateParameter"
+        - $ref: "#/components/schemas/unknownTemplateParameter"
+      discriminator:
+        propertyName: type
+        mapping:
+          string: "#/components/schemas/stringTemplateParameter"
+          number: "#/components/schemas/numberTemplateParameter"
+          boolean: "#/components/schemas/booleanTemplateParameter"
+          object: "#/components/schemas/objectTemplateParameter"
+          array: "#/components/schemas/arrayTemplateParameter"
+          unknown: "#/components/schemas/unknownTemplateParameter"
+    stringTemplateParameter:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/templateParameterType"
+        defaultValue:
+          type: string
+    numberTemplateParameter:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/templateParameterType"
+        defaultValue:
+          type: number
+    booleanTemplateParameter:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/templateParameterType"
+        defaultValue:
+          type: boolean
+    objectTemplateParameter:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/templateParameterType"
+        defaultValue:
+          type: object
+    arrayTemplateParameter:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/templateParameterType"
+        defaultValue:
+          type: array
+          items: {}
+    unknownTemplateParameter:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/templateParameterType"
+    templateParameterType:
+      type: string
+      enum:
+        - string
+        - number
+        - boolean
+        - object
+        - array
+        - unknown
+    templateSummary:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    newTemplate:
+      type: object
+      required:
+        - title
+        - description
+        - body
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        body:
+          type: string
+    updateTemplate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        body:
+          type: string
+    trigger:
+      type: object
+      required:
+        - id
+        - title
+        - templateId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        templateId:
+          type: string
+        secretKey:
+          type: string
+          description: This key must be passed in the URL to invoke the trigger
+        defaultArguments:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    newTrigger:
+      type: object
+      required:
+        - title
+        - templateId
+      properties:
+        title:
+          type: string
+        templateId:
+          type: string
+        defaultArguments:
+          type: object
+    templateExpandPayload:
+      type: object
+    triggerInvokeResponse:
+      type: object
+      required:
+        - notebookTitle
+        - notebookId
+        - notebookUrl
+      properties:
+        notebookTitle:
+          type: string
+        notebookId:
+          type: string
+        notebookUrl:
+          type: string
+          format: uri
+    createdBy:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/userType"
+        proxy:
+          $ref: "#/components/schemas/proxySummary"
+    logRecord:
+      type: object
+      required:
+        - timestamp
+        - body
+        - attributes
+        - resource
+      properties:
+        timestamp:
+          type: number
+          format: double
+        body:
+          type: string
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+        resource:
+          type: object
+          additionalProperties:
+            type: string
+        traceId:
+          type: string
+        spanId:
+          type: string
+    userType:
+      type: string
+      enum:
+        - organization
+        - individual
+    label:
+      type: object
+      required:
+        - "key"
+        - "value"
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    notebookSearch:
+      properties:
+        labels:
+          description: |
+            Search notebooks based on labels. You can search for an exact label
+            match by supplying both an key and a value. You can also search for
+            all labels that have a specific key by passing passing a key with a
+            null value or a empty string value. The notebook's labels needs to
+            match _every_ label search that is provided.
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+            nullable: true # this does not seem to have any effect on the generated rust client
+    newEvent:
+      type: object
+      required:
+        - "title"
+      properties:
+        title:
+          type: string
+        labels:
+          type: object # Hash Map
+          additionalProperties:
+            type: string
+            nullable: true
+        time:
+          type: string
+          format: date-time
+    newToken:
+      type: object
+      required:
+        - "title"
+      properties:
+        title:
+          type: string
+    event:
+      type: object
+      required:
+        - "id"
+        - "title"
+        - "labels"
+        - "occurrenceTime"
+        - "createdAt"
+        - "updatedAt"
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        title:
+          type: string
+        labels:
+          type: object # Hash Map
+          additionalProperties:
+            type: string
+        occurrenceTime:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    token:
+      type: object
+      required:
+        - "id"
+        - "title"
+        - "token"
+        - "createdAt"
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        title:
+          type: string
+        token:
+          type: string
+          format: password
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    tokenSummary:
+      type: object
+      required:
+        - "id"
+        - "title"
+        - "createdAt"
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    thread:
+      type: object
+      required:
+        - id
+        - items
+        - status
+        - createdBy
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/threadItem"
+        status:
+          $ref: "#/components/schemas/threadStatus"
+        createdBy:
+          $ref: "#/components/schemas/userSummary"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    threadStatus:
+      type: string
+      enum:
+        - "open"
+        - "resolved"
+    threadSummary:
+      type: object
+      required:
+        - id
+        - status
+        - createdBy
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        firstItem:
+          $ref: "#/components/schemas/threadItem"
+        recentItems:
+          type: array
+          description: Most recent thread items, sorted in chronological order
+          items:
+            $ref: "#/components/schemas/threadItem"
+        status:
+          $ref: "#/components/schemas/threadStatus"
+        createdBy:
+          $ref: "#/components/schemas/userSummary"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    threadItemType:
+      type: string
+      enum:
+        - "comment"
+        - "status_change"
+        - "comment_delete"
+    threadItem:
+      oneOf:
+        - $ref: "#/components/schemas/commentThreadItem"
+        - $ref: "#/components/schemas/statusChangeThreadItem"
+        - $ref: "#/components/schemas/commentDeleteThreadItem"
+      discriminator:
+        propertyName: type
+        mapping:
+          comment: "#/components/schemas/commentThreadItem"
+          status_change: "#/components/schemas/statusChangeThreadItem"
+          comment_delete: "#/components/schemas/commentDeleteThreadItem"
+    commentThreadItem:
+      allOf:
+        - $ref: "#/components/schemas/comment"
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              $ref: "#/components/schemas/threadItemType"
+    comment:
+      type: object
+      required:
+        - id
+        - createdBy
+        - content
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+        createdBy:
+          $ref: "#/components/schemas/userSummary"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    statusChangeThreadItem:
+      type: object
+      required:
+        - type
+        - id
+        - createdBy
+        - status
+        - createdAt
+      properties:
+        type:
+          $ref: "#/components/schemas/threadItemType"
+        id:
+          type: string
+          format: base64uuid
+        status:
+          $ref: "#/components/schemas/threadStatus"
+        createdBy:
+          $ref: "#/components/schemas/userSummary"
+        createdAt:
+          type: string
+          format: date-time
+    commentDeleteThreadItem:
+      type: object
+      required:
+        - type
+        - id
+        - createdBy
+        - createdAt
+        - deletedAt
+      properties:
+        type:
+          $ref: "#/components/schemas/threadItemType"
+        id:
+          type: string
+          format: base64uuid
+        createdBy:
+          $ref: "#/components/schemas/userSummary"
+        createdAt:
+          description: Timestamp when the original comment was created
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+    newThread:
+      type: object
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        comment:
+          $ref: "#/components/schemas/newComment"
+    newComment:
+      type: object
+      required:
+        - content
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+    updateComment:
+      type: object
+      properties:
+        content:
+          type: string
+        formatting:
+          $ref: "#/components/schemas/formatting"
+    userSummary:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: base64uuid
+        name:
+          type: string
+  parameters:
+    sortDirection:
+      in: query
+      name: sort_direction
+      description: Sort the resulting list in the following direction (defaults to ascending)
+      schema:
+        type: string
+        enum:
+          - "ascending"
+          - "descending"
+      required: false
+    page:
+      in: query
+      name: page
+      description: Page number which should be displayed; 0-indexed (defaults to 0)
+      schema:
+        type: integer
+      required: false
+    limit:
+      in: query
+      name: limit
+      description: Maximum amount of results to display per page (defaults to 20)
+      schema:
+        type: integer
+      required: false
+    workspaceId:
+      name: workspace_id
+      in: path
+      description: The workspace ID
+      required: true
+      schema:
+        type: string
+        format: base64uuid
+    notebookId:
+      in: path
+      name: notebookId
+      required: true
+      schema:
+        type: string
+        format: base64uuid
+    threadId:
+      in: path
+      name: threadId
+      required: true
+      schema:
+        type: string
+        format: base64uuid
+    commentId:
+      in: path
+      name: commentId
+      required: true
+      schema:
+        type: string
+        format: base64uuid
+  responses:
+    thread:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/thread"
+    comment:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/comment"
+# Most routes require authentication. The ones
+# that do not will specify "security: []"
+security:
+  - userToken: []
+paths:
+  /api/notebooks:
+    get:
+      operationId: notebook_list
+      description: "List all accessible notebooks"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/notebookSummary"
+    post:
+      operationId: notebook_create
+      description: "Create a new notebook"
+      requestBody:
+        description: new notebook
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newNotebook"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/notebook"
+  /api/notebooks/{notebookId}:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+    get:
+      operationId: get_notebook
+      description: "Fetch a single notebook"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/notebook"
+          description: OK
+    delete:
+      operationId: delete_notebook
+      responses:
+        "200":
+          description: OK
+    patch:
+      operationId: patch_notebook
+      description: "Modifies individual properties of a single notebook"
+      requestBody:
+        description: updated properties
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/notebookPatch"
+      responses:
+        "200":
+          description: OK
+  /api/notebooks/{notebookId}/template.jsonnet:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+    get:
+      operationId: convert_notebook_to_template
+      description: Convert the notebook to a Template
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: OK
+  /api/notebooks/{notebookId}/cells:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+    post:
+      operationId: notebook_cells_append
+      description: Append the given cells to the notebook
+      requestBody:
+        description: Cells to append
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/cell"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/cell"
+  /api/notebooks/{notebookId}/cells/{cellId}/append:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+      - name: cellId
+        in: path
+        description: ID of the notebook cell
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: notebook_cell_append_text
+      description: Append the given text and optional formatting to the specified cell
+      requestBody:
+        description: Content and optional formatting to append
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/cellAppendText"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/cell"
+  /api/notebooks/{notebookId}/cells/{cellId}/replaceText:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+      - name: cellId
+        in: path
+        description: ID of the notebook cell
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: notebook_cell_replace_text
+      description: Replace some text and formatting in the specified cell
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/cellReplaceText"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/cell"
+  /api/notebooks/{notebookId}/threads:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+    post:
+      operationId: thread_create
+      description: Create a new comment thread
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newThread"
+      responses:
+        "200":
+          $ref: "#/components/responses/thread"
+    get:
+      operationId: threads_list
+      description: List the threads in the given notebook
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/threadStatus"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/threadSummary"
+  /api/datasources:
+    post:
+      operationId: org_data_source_create
+      description: "Create an organization data-source"
+      requestBody:
+        description: new data-source
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newOrgDataSource"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/orgDataSource"
+  /api/files/{notebookId}:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+    post:
+      operationId: file_upload
+      description: "upload a file"
+      requestBody:
+        description: a file
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/uploadData"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fileSummary"
+  /api/files/{notebookId}/{fileId}:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+      - name: fileId
+        in: path
+        description: ID of the file
+        required: true
+        schema:
+          type: string
+    delete:
+      operationId: delete_file
+      description: "Delete a file"
+      responses:
+        "200":
+          description: OK
+    get:
+      operationId: get_file
+      description: "Get a file"
+      # images are accessible to anonymous users for public notebooks
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+  /api/profile:
+    get:
+      operationId: get_profile
+      description: "Fetch the profile of the authenticated user"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user"
+          description: OK
+  /api/profile/picture:
+    get:
+      operationId: get_profile_picture
+      description: "Retrieve profile image"
+      # can be unauthenticated
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+    post:
+      operationId: update_profile_picture
+      description: "Upload profile image"
+      requestBody:
+        description: a file
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ProfileUploadData"
+      responses:
+        "200":
+          description: OK
+  /api/pinnednotebooks:
+    get:
+      operationId: pinned_notebook_list
+      description: "List all pinned notebooks"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/notebookSummary"
+    post:
+      operationId: pinned_notebook_create
+      description: "Create a new notebook"
+      requestBody:
+        description: new notebook
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newPinnedNotebook"
+      responses:
+        "200":
+          description: OK
+  /api/pinnednotebooks/{notebookId}:
+    parameters:
+      - $ref: "#/components/parameters/notebookId"
+    delete:
+      operationId: pinned_notebook_delete
+      responses:
+        "200":
+          description: OK
+  /api/proxies:
+    get:
+      operationId: proxy_list
+      description: "List all proxies"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/proxySummary"
+    post:
+      operationId: proxy_create
+      description: "Create a new proxy"
+      requestBody:
+        description: new proxy
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newProxy"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/proxy"
+  /api/proxies/datasources:
+    get:
+      operationId: proxy_data_sources_list
+      description: Get all of the data sources for all proxies that belong to the same organization as the user
+      security:
+        - userToken: []
+        - serviceToken: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/dataSourceAndProxySummary"
+  /api/proxies/{proxyId}:
+    parameters:
+      - name: proxyId
+        in: path
+        description: ID of the proxy
+        required: true
+        schema:
+          type: string
+    delete:
+      operationId: proxy_delete
+      responses:
+        "200":
+          description: OK
+    get:
+      operationId: proxy_get
+      description: "Retrieve a single proxy"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/proxy"
+  /api/proxies/{proxyId}/relay:
+    parameters:
+      - name: proxyId
+        in: path
+        description: ID of the proxy
+        required: true
+        schema:
+          type: string
+      - name: dataSourceName
+        in: query
+        description: Name of the data source
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: proxy_relay
+      description: "Relay a query to a remote proxy"
+      responses:
+        "200":
+          description: OK
+  /api/oidc/authorize/google:
+    parameters:
+      - name: cli_redirect_port
+        in: query
+        description: The port on localhost to redirect to after the OAuth flow is successful. Used for authorizing the CLI
+        required: false
+        schema:
+          type: integer
+      - name: redirect
+        in: query
+        description: Relative path to redirect to after the OAuth flow is successful. Used for deep linking into the Studio
+        required: false
+        schema:
+          type: string
+    get:
+      operationId: oidc_authorize_google
+      description: Start the Google OAuth flow to authenticate a user
+      responses:
+        "307":
+          description: Redirect to Google
+  /api/logout:
+    post:
+      operationId: logout
+      description: Log out of Fiberplane
+      responses:
+        "200":
+          description: OK
+  /api/templates:
+    post:
+      operationId: template_create
+      description: Create a new template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newTemplate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/template"
+    get:
+      operationId: template_list
+      description: List the templates that have been uploaded
+      parameters:
+        - in: query
+          name: sort_by
+          description: Sort the resulting list by the following field (defaults to title)
+          schema:
+            type: string
+            enum:
+              - "title"
+              - "created_at"
+              - "updated_at"
+          required: false
+        - $ref: "#/components/parameters/sortDirection"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/templateSummary"
+  /api/templates/{templateId}:
+    parameters:
+      - name: templateId
+        in: path
+        description: ID of the template
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: template_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/template"
+    patch:
+      operationId: template_update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updateTemplate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/template"
+    delete:
+      operationId: template_delete
+      responses:
+        "200":
+          description: OK
+  /api/templates/{templateId}/expand:
+    parameters:
+      - name: templateId
+        in: path
+        description: ID of the template
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: template_expand
+      description: Expand the template into a notebook
+      requestBody:
+        description: Parameters to pass to the template
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/templateExpandPayload"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/notebook"
+  /api/templates/examples:
+    get:
+      operationId: template_example_list
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/template"
+  /api/templates/examples/{templateId}/expand:
+    parameters:
+      - name: templateId
+        in: path
+        description: ID of the template
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: template_example_expand
+      requestBody:
+        description: Parameters to pass to the template
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/templateExpandPayload"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/notebook"
+  /api/triggers:
+    get:
+      operationId: trigger_list
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/trigger"
+    post:
+      operationId: trigger_create
+      description: Create a new trigger
+      requestBody:
+        required: true
+        description: Template URL or body
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newTrigger"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/trigger"
+  /api/triggers/{triggerId}:
+    parameters:
+      - name: triggerId
+        in: path
+        description: ID of the trigger
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: trigger_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/trigger"
+    delete:
+      operationId: trigger_delete
+      responses:
+        "200":
+          description: OK
+  /api/triggers/{triggerId}/{secretKey}:
+    parameters:
+      - name: triggerId
+        in: path
+        description: ID of the trigger
+        required: true
+        schema:
+          type: string
+      - name: secretKey
+        in: path
+        description: Secret key of the trigger (included in the response when the trigger is first created)
+        required: true
+        schema:
+          type: string
+    post:
+      # This does not require normal authentication but uses the secretKey URL parameter
+      security: []
+      operationId: trigger_invoke
+      description: "Invoke a trigger to create a notebook from the associated template"
+      requestBody:
+        description: Parameters to pass to the template
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/templateExpandPayload"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/triggerInvokeResponse"
+  /api/organizations/current/users:
+    get:
+      operationId: org_user_list_current
+      description: "Fetch the users of the current organization"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/user"
+          description: OK
+  /api/workspace/{workspace_id}/labels/keys:
+    parameters:
+      - $ref: "#/components/parameters/workspaceId"
+    get:
+      operationId: label_keys_list
+      description: Retrieve all label keys
+      parameters:
+        - name: prefix
+          in: query
+          description: Prefix of the label key
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/workspace/{workspace_id}/labels/values/{label_key}:
+    parameters:
+      - $ref: "#/components/parameters/workspaceId"
+      - name: label_key
+        in: path
+        description: The label key
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: label_values_list
+      description: Retrieve all label values for a specific key
+      parameters:
+        - name: prefix
+          in: query
+          description: Prefix of the label value
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/search/notebooks:
+    post:
+      operationId: notebook_search
+      description: Search for notebooks
+      requestBody:
+        required: true
+        description: Notebook search payload
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/notebookSearch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/notebookSummary"
+  /api/workspace/{workspace_id}/events:
+    parameters:
+      - $ref: "#/components/parameters/workspaceId"
+    get:
+      operationId: event_list
+      description: Get a list of all events matching the query
+      parameters:
+        - in: query
+          name: occurrence_time_start
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: occurrence_time_end
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: labels
+          schema:
+            type: object
+            nullable: true
+            additionalProperties:
+              type: string
+        - in: query
+          name: sort_by
+          description: Sort the resulting list by the following field (defaults to occurrence_time)
+          schema:
+            type: string
+            enum:
+              - "title"
+              - "occurrence_time"
+              - "created_at"
+              - "updated_at"
+          required: false
+        - $ref: "#/components/parameters/sortDirection"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/event"
+    post:
+      operationId: event_create
+      description: Creates a new event
+      requestBody:
+        required: true
+        description: Event creation payload
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newEvent"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/event"
+  /api/workspace/{workspace_id}/events/{id}:
+    parameters:
+      - $ref: "#/components/parameters/workspaceId"
+      - name: id
+        in: path
+        description: ID of the event
+        required: true
+        schema:
+          type: string
+          format: base64uuid
+    delete:
+      operationId: event_delete
+      description: Deletes a event
+      responses:
+        "200":
+          description: OK
+  /api/tokens:
+    get:
+      operationId: token_list
+      description: Gets a list of api tokens
+      parameters:
+        - in: query
+          name: sort_by
+          description: Sort the resulting list by the following field (defaults to title)
+          schema:
+            type: string
+            enum:
+              - "title"
+              - "created_at"
+              - "expires_at"
+          required: false
+        - $ref: "#/components/parameters/sortDirection"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/tokenSummary"
+    post:
+      operationId: token_create
+      description: Creates a new token
+      requestBody:
+        required: true
+        description: Token creation payload
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newToken"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/token"
+  /api/tokens/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: |
+          ID of the token which should be deleted
+
+          # Deleting current token
+
+          If you want to delete the token with which you sent the request, call `/api/logout` instead.
+        required: true
+        schema:
+          type: string
+          format: base64uuid
+    delete:
+      operationId: token_delete
+      description: Deletes a token
+      responses:
+        "200":
+          description: OK
+  /api/threads/{threadId}:
+    parameters:
+      - $ref: "#/components/parameters/threadId"
+    get:
+      operationId: thread_get
+      responses:
+        "200":
+          $ref: "#/components/responses/thread"
+    delete:
+      operationId: thread_delete
+      responses:
+        "200":
+          description: OK
+  /api/threads/{threadId}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/threadId"
+    post:
+      operationId: thread_resolve
+      responses:
+        "200":
+          $ref: "#/components/responses/thread"
+  /api/threads/{threadId}/reopen:
+    parameters:
+      - $ref: "#/components/parameters/threadId"
+    post:
+      operationId: thread_reopen
+      responses:
+        "200":
+          $ref: "#/components/responses/thread"
+  /api/threads/{threadId}/comments:
+    parameters:
+      - $ref: "#/components/parameters/threadId"
+    post:
+      operationId: comment_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/newComment"
+      responses:
+        "200":
+          $ref: "#/components/responses/comment"
+  /api/comments/{commentId}:
+    parameters:
+      - $ref: "#/components/parameters/commentId"
+    get:
+      operationId: comment_get
+      responses:
+        "200":
+          $ref: "#/components/responses/comment"
+    patch:
+      operationId: comment_update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updateComment"
+      responses:
+        "200":
+          $ref: "#/components/responses/comment"
+    delete:
+      operationId: comment_delete
+      responses:
+        "200":
+          description: OK
+  /api/queries/{datasource_type}/suggestions:
+      parameters:
+        - name: datasource_type
+          in: path
+          description: The type of the datasource
+          required: true
+          schema:
+            $ref: "#/components/schemas/dataSourceType"
+      get:
+        operationId: suggest_query
+        description: Retrieve query suggestions for a given datasource type
+        responses:
+          "200":
+            description: OK
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    type: string
