@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use okapi::openapi3::OpenApi;
 
 mod generator;
+mod models;
+mod routes;
 
 fn main() -> Result<()> {
     let args: Args = Args::parse();

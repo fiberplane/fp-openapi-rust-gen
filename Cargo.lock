@@ -32,6 +32,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "check_keyword"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4d532198271d4fb82f944bd25527e760a6cfc966c7d592525e092d4c6a4f787"
+
+[[package]]
 name = "clap"
 version = "3.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -69,6 +75,12 @@ checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
 dependencies = [
  "os_str_bytes",
 ]
+
+[[package]]
+name = "convert_case"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
 
 [[package]]
 name = "hashbrown"
@@ -135,8 +147,11 @@ name = "openapi-hackday-gen"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "check_keyword",
  "clap",
+ "convert_case",
  "okapi",
+ "schemars",
  "serde",
  "serde_yaml",
 ]
