@@ -66,7 +66,14 @@ fn generate_normal_field(name: &str, schema: &SchemaObject, required_list: &Set<
 
     match schema.format.as_deref() {
         Some("base64uuid") => write!(writer, "base64uuid::Base64Uuid")?,
-        Some("date-time") => write!(writer, "time::OffsetDateTime")?,
+        Some("int32") => write!(writer, "i32")?,
+        Some("int64") => write!(writer, "i64")?,
+        Some("float") => write!(writer, "f32")?,
+        Some("double") => write!(writer, "f64")?,
+        Some("byte") => write!(writer, "Vec<u8>")?, // TODO: Deserialize from Base64
+        Some("binary") => write!(writer, "Vec<u8>")?,
+        Some("date") | Some("date-time") => write!(writer, "time::OffsetDateTime")?,
+        Some("password") => write!(writer, "SecureString")?,
         Some(_) | None => if let Some(SingleOrVec::Single(instance_type)) = &schema.instance_type {
             match **instance_type {
                 InstanceType::Null => write!(writer, "()")?,
@@ -96,13 +103,3 @@ fn generate_normal_field(name: &str, schema: &SchemaObject, required_list: &Set<
 
     Ok(())
 }
-
-/*
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct UserSummary {
-    #[serde(rename = "id")]
-    pub id: String,
-    #[serde(rename = "name")]
-    pub name: String,
-}
- */
