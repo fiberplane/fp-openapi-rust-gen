@@ -1,10 +1,10 @@
+use anyhow::{bail, Context, Result};
+use clap::Parser;
+use okapi::openapi3::OpenApi;
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
-use anyhow::{bail, Context, Result};
-use clap::Parser;
 use std::path::{Path, PathBuf};
-use okapi::openapi3::OpenApi;
 
 mod generator;
 mod models;
@@ -28,7 +28,8 @@ fn main() -> Result<()> {
     let file = File::open(path).context("Failed to read OpenAPI document")?;
     let reader = BufReader::new(file);
 
-    let document: OpenApi = serde_yaml::from_reader(reader).context("Failed to parse OpenAPI document")?;
+    let document: OpenApi =
+        serde_yaml::from_reader(reader).context("Failed to parse OpenAPI document")?;
 
     let output = args.output.as_path();
 
