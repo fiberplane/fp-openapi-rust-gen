@@ -1,3 +1,5 @@
+#[forbid(unsafe_code)]
+
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use okapi::openapi3::OpenApi;
@@ -10,6 +12,7 @@ mod client_config;
 mod generator;
 mod models;
 mod routes;
+mod types;
 
 fn main() -> Result<()> {
     let args: Args = Args::parse();
