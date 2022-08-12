@@ -1,3 +1,4 @@
+use crate::client_config::generate_client_configs;
 use crate::models::generate_models;
 use crate::routes::generate_routes;
 use anyhow::{anyhow, bail, Context, Result};
@@ -34,6 +35,8 @@ pub(crate) fn generate_crate(document: OpenApi, path: &Path) -> Result<()> {
     edit_cargo_toml(path)?;
 
     let src_directory = path.join("src");
+
+    generate_client_configs(&document.servers, &src_directory)?;
 
     if let Some(components) = document.components {
         generate_models(&components, &src_directory)?;
@@ -91,7 +94,9 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
     {
         let mut dependency = DependencyDetail::default();
         dependency.version = Some("2".to_string());
+        dependency.features.push("encoding".to_string());
         dependency.features.push("hyper-client".to_string());
+        dependency.default_features = Some(false);
 
         dependencies.insert("surf".to_string(), Dependency::Detailed(dependency));
     }

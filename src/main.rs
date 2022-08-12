@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
+mod client_config;
 mod generator;
 mod models;
 mod routes;
