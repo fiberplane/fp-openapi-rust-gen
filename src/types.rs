@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use convert_case::{Case, Casing};
-use okapi::openapi3::{Components, Parameter, RefOr, Response, Responses};
+use okapi::openapi3::{Components, Parameter, RefOr, RequestBody, Response, Responses};
 use schemars::schema::{InstanceType, Schema, SchemaObject, SingleOrVec};
 use std::borrow::Cow;
 
@@ -47,6 +47,7 @@ pub(crate) enum ResolveTarget<'a> {
     Schema(&'a Option<&'a RefOr<SchemaObject>>),
     Parameter(&'a Option<&'a RefOr<Parameter>>),
     Response(&'a Option<&'a RefOr<Response>>),
+    RequestBody(&'a Option<&'a RefOr<RequestBody>>),
 }
 
 impl ResolveTarget<'_> {
@@ -63,6 +64,7 @@ impl ResolveTarget<'_> {
             ResolveTarget::Schema(inner) => (*inner).map(|input| Self::type_erase(input)),
             ResolveTarget::Parameter(inner) => (*inner).map(|input| Self::type_erase(input)),
             ResolveTarget::Response(inner) => (*inner).map(|input| Self::type_erase(input)),
+            ResolveTarget::RequestBody(inner) => (*inner).map(|input| Self::type_erase(input)),
         }
     }
 
@@ -77,34 +79,52 @@ impl ResolveTarget<'_> {
             }
             ResolveTarget::Parameter(_) => panic!("called `unpack_schema` on Parameter(..)"),
             ResolveTarget::Response(_) => panic!("called `unpack_schema` on Response(..)"),
+            ResolveTarget::RequestBody(_) => panic!("called `unpack_schema` on RequestBody(..)"),
         }
     }
 
     /// Clones the inner Parameter. Panics if `self` is not `Some(Parameter)`
     fn unpack_parameter(&self) -> Parameter {
         match self {
-            ResolveTarget::Schema(_) => panic!("called `unpack_schema` on Schema(..)"),
+            ResolveTarget::Schema(_) => panic!("called `unpack_parameter` on Schema(..)"),
             ResolveTarget::Parameter(parameter) => {
-                match parameter.expect("called `unpack_schema` on Parameter(None)") {
-                    RefOr::Ref(_) => panic!("called `unpack_schema` on Parameter(Ref(..))"),
+                match parameter.expect("called `unpack_parameter` on Parameter(None)") {
+                    RefOr::Ref(_) => panic!("called `unpack_parameter` on Parameter(Ref(..))"),
                     RefOr::Object(object) => object.clone(),
                 }
             }
-            ResolveTarget::Response(_) => panic!("called `unpack_schema` on Response(..)"),
+            ResolveTarget::Response(_) => panic!("called `unpack_parameter` on Response(..)"),
+            ResolveTarget::RequestBody(_) => panic!("called `unpack_parameter` on RequestBody(..)"),
         }
     }
 
     /// Clones the inner Response. Panics if `self` is not `Some(Response)`
     fn unpack_responses(&self) -> Response {
         match self {
-            ResolveTarget::Schema(_) => panic!("called `unpack_schema` on Schema(..)"),
-            ResolveTarget::Parameter(_) => panic!("called `unpack_schema` on Parameter(..)"),
+            ResolveTarget::Schema(_) => panic!("called `unpack_responses` on Schema(..)"),
+            ResolveTarget::Parameter(_) => panic!("called `unpack_responses` on Parameter(..)"),
             ResolveTarget::Response(responses) => {
-                match responses.expect("called `unpack_schema` on Responses(None)") {
-                    RefOr::Ref(_) => panic!("called `unpack_schema` on Responses(Ref(..))"),
+                match responses.expect("called `unpack_responses` on Responses(None)") {
+                    RefOr::Ref(_) => panic!("called `unpack_responses` on Responses(Ref(..))"),
                     RefOr::Object(object) => object.clone(),
                 }
-            }
+            },
+            ResolveTarget::RequestBody(_) => panic!("called `unpack_responses` on RequestBody(..)"),
+        }
+    }
+
+    /// Clones the inner RequestBody. Panics if `self` is not `Some(RequestBody)`
+    fn unpack_request_body(&self) -> RequestBody {
+        match self {
+            ResolveTarget::Schema(_) => panic!("called `unpack_request_body` on Schema(..)"),
+            ResolveTarget::Parameter(_) => panic!("called `unpack_request_body` on Parameter(..)"),
+            ResolveTarget::Response(_) => panic!("called `unpack_request_body` on Response(..)"),
+            ResolveTarget::RequestBody(request_body) => {
+                match request_body.expect("called `unpack_request_body` on RequestBody(None)") {
+                    RefOr::Ref(_) => panic!("called `unpack_request_body` on RequestBody(Ref(..))"),
+                    RefOr::Object(object) => object.clone(),
+                }
+            },
         }
     }
 }
@@ -125,6 +145,9 @@ pub(crate) fn resolve<'a>(
             ResolveTarget::Response(_) => Some(ResolvedReference::Responses(Cow::Owned(
                 input.unpack_responses(),
             ))),
+            ResolveTarget::RequestBody(_) => Some(ResolvedReference::RequestBody(Cow::Owned(
+                input.unpack_request_body(),
+            ))),
         },
         None => None,
     })
@@ -135,6 +158,7 @@ pub(crate) enum ResolvedReference<'a> {
     Schema(Cow<'a, SchemaObject>),
     Parameter(Cow<'a, Parameter>),
     Responses(Cow<'a, Response>),
+    RequestBody(Cow<'a, RequestBody>),
 }
 
 pub(crate) fn resolve_reference<'a>(
@@ -168,6 +192,13 @@ pub(crate) fn resolve_reference<'a>(
             |ref_or| match ref_or {
                 RefOr::Ref(reference) => resolve_reference(&reference.reference, components),
                 RefOr::Object(object) => Ok(Some(Responses(Cow::Borrowed(object)))),
+            },
+        ),
+        "requestBody" => components.request_bodies.get(name).map_or_else(
+            || Ok(None),
+            |ref_or| match ref_or {
+                RefOr::Ref(reference) => resolve_reference(&reference.reference, components),
+                RefOr::Object(object) => Ok(Some(RequestBody(Cow::Borrowed(object)))),
             },
         ),
         _ => {
