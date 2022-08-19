@@ -226,18 +226,15 @@ fn generate_function_body(
     operation: &Operation,
     writer: &mut BufWriter<File>,
 ) -> Result<()> {
-    write!(
-        writer,
-        "    let response = client.request(Method::{}, ",
-        method
-    )?;
+    write!(writer, "    let response = client.request(\n", )?;
+    write!(writer, "        Method::{},\n", method)?;
 
     // https://stackoverflow.com/a/413077/11494565
     let regex = Regex::new(r#"\{(.*?)\}"#).context("Failed to build regex")?;
     let matched_captures = regex.captures(endpoint);
 
     if let Some(captures) = matched_captures {
-        write!(writer, "&format!(\"{}\", ", endpoint)?;
+        write!(writer, "        &format!(\"{}\", ", endpoint)?;
 
         // The first argument of the captures iter is the overall match
         for option in captures.iter().skip(1) {
@@ -251,10 +248,13 @@ fn generate_function_body(
 
         write!(writer, ")")?;
     } else {
-        write!(writer, "\"{}\"", endpoint)?;
+        write!(writer, "        \"{}\"", endpoint)?;
     }
 
-    write!(writer, ").await?;")?;
+    write!(writer, "\n    )\n")?;
+
+    write!(writer, "        .send()\n")?;
+    write!(writer, "        .await?;\n")?;
 
     Ok(())
 }
