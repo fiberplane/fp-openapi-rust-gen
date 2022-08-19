@@ -94,15 +94,17 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
     // secrecy
     dependencies.insert("secrecy".to_string(), Dependency::Simple("0".to_string()));
 
-    // surf
+    // reqwest
     {
         let mut dependency = DependencyDetail::default();
-        dependency.version = Some("2".to_string());
-        dependency.features.push("encoding".to_string());
-        dependency.features.push("hyper-client".to_string());
+        dependency.version = Some("0.11".to_string());
+        dependency.features.push("json".to_string());
+        dependency.features.push("multipart".to_string());
+        dependency.features.push("gzip".to_string());
+        dependency.features.push("rustls-tls".to_string());
         dependency.default_features = Some(false);
 
-        dependencies.insert("surf".to_string(), Dependency::Detailed(dependency));
+        dependencies.insert("reqwest".to_string(), Dependency::Detailed(dependency));
     }
 
     // base64uuid

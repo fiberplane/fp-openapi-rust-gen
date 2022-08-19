@@ -19,7 +19,10 @@ pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) ->
     let mut writer = BufWriter::new(file);
 
     write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
-    write!(writer, "use surf::{{Client, Config, Url}};\n")?;
+    write!(
+        writer,
+        "use reqwest::{{Client, header, Method, RequestBuilder, Url}};\n"
+    )?;
     write!(writer, "use std::time::Duration;\n\n")?;
 
     generate_config_method(&mut writer)?;
@@ -28,6 +31,8 @@ pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) ->
         generate_client_method(server, &mut writer)?;
     }
 
+    generate_client_type(&mut writer)?;
+
     writer
         .flush()
         .context("Failed to flush output for `clients.rs`")
@@ -35,18 +40,20 @@ pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) ->
 
 fn generate_config_method(writer: &mut BufWriter<File>) -> Result<()> {
     write!(writer, "pub fn default_config(\n")?;
-    write!(writer, "    url: Url,\n")?;
-    write!(writer, "    timeout: Option<u64>,\n")?;
+    write!(writer, "    timeout: Option<Duration>,\n")?;
     write!(writer, "    user_agent: Option<&str>,\n")?;
-    write!(writer, ") -> Result<Config> {{\n")?;
+    write!(writer, ") -> Result<Client> {{\n")?;
 
-    write!(writer, "    Ok(Config::new()\n")?;
-    write!(writer, "        .set_base_url(url)\n")?;
+    write!(writer, "    let mut headers = header::HeaderMap::new();\n")?;
+    write!(writer, "    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(user_agent.unwrap_or(\"Fiberplane Rust API client\"))?);\n\n")?;
+
+    write!(writer, "    Ok(Client::builder()\n")?;
     write!(
         writer,
-        "        .set_timeout(timeout.map(|seconds| Duration::from_secs(seconds)))\n"
+        "        .connect_timeout(timeout.unwrap_or_else(|| Duration::from_secs(10)))\n"
     )?;
-    write!(writer, "        .add_header(\"User-Agent\", user_agent.unwrap_or(\"Fiberplane Rust API client\"))?)\n")?;
+    write!(writer, "        .default_headers(headers)\n")?;
+    write!(writer, "        .build()?)\n")?;
 
     write!(writer, "}}\n\n")?;
 
@@ -76,7 +83,7 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
         }
     }
 
-    write!(writer, ") -> Result<Client> {{\n")?;
+    write!(writer, ") -> Result<ApiClient> {{\n")?;
 
     let variables: Vec<String> = server
         .variables
@@ -117,17 +124,42 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
     write!(writer, "\n\n")?;
 
     write!(writer, "    let config = default_config(\n")?;
-    write!(
-        writer,
-        "        Url::parse(url).context(\"Failed to parse base url from Open API document\")?,\n"
-    )?;
-    write!(writer, "        Some(5),\n")?;
+    write!(writer, "        Some(Duration::from_secs(5)),\n")?;
     write!(writer, "        None,\n")?;
     write!(writer, "    )?;\n\n")?;
 
-    write!(writer, "    Ok(config.try_into()?)\n")?;
+    write!(writer, "    Ok(ApiClient {{\n")?;
+    write!(writer, "        client: config,\n")?;
+    write!(writer, "        server: Url::parse(url).context(\"Failed to parse base url from Open API document\")?,\n")?;
+    write!(writer, "    }})\n")?;
 
     write!(writer, "}}\n\n")?;
+
+    Ok(())
+}
+
+fn generate_client_type(writer: &mut BufWriter<File>) -> Result<()> {
+    write!(writer, "#[derive(Debug)]\n")?;
+    write!(writer, "pub struct ApiClient {{\n")?;
+    write!(writer, "    client: Client,\n")?;
+    write!(writer, "    server: Url,\n")?;
+    write!(writer, "}}\n\n")?;
+
+    write!(writer, "impl ApiClient {{\n")?;
+
+    write!(
+        writer,
+        "    pub fn request(&self, method: Method, endpoint: &str) -> RequestBuilder {{\n"
+    )?;
+    write!(
+        writer,
+        "        let url = format!(\"{{}}{{}}\", &self.server, endpoint);\n\n"
+    )?;
+
+    write!(writer, "        self.client.request(method, url)\n")?;
+    write!(writer, "    }}\n")?;
+
+    write!(writer, "}}\n")?;
 
     Ok(())
 }

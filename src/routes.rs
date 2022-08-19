@@ -1,17 +1,23 @@
 use crate::types;
+use crate::types::{resolve, ResolveTarget, ResolvedReference};
 use anyhow::{anyhow, bail, Context, Result};
 use convert_case::{Case, Casing};
-use okapi::openapi3::{Components, MediaType, Operation, Parameter, ParameterValue, PathItem, RefOr, RequestBody, Response};
+use okapi::openapi3::{
+    Components, MediaType, Operation, Parameter, ParameterValue, PathItem, RefOr, RequestBody,
+    Response,
+};
 use okapi::Map;
 use regex::Regex;
 use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
-use surf::Config;
-use crate::types::{resolve, ResolvedReference, ResolveTarget};
 
-pub(crate) fn generate_routes(paths: &Map<String, PathItem>, src_path: &PathBuf, components: &Components) -> Result<()> {
+pub(crate) fn generate_routes(
+    paths: &Map<String, PathItem>,
+    src_path: &PathBuf,
+    components: &Components,
+) -> Result<()> {
     let path = src_path.join("lib.rs");
 
     // https://stackoverflow.com/a/50691004/11494565
@@ -27,29 +33,28 @@ pub(crate) fn generate_routes(paths: &Map<String, PathItem>, src_path: &PathBuf,
     write!(writer, "#[forbid(unsafe_code)]\n\n")?;
 
     write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
-    write!(writer, "use surf::Client;\n\n")?;
+    write!(writer, "use crate::clients::ApiClient;\n")?;
+    write!(writer, "use reqwest::Method;\n\n")?;
 
     write!(writer, "pub mod clients;\n")?;
     write!(writer, "pub mod models;\n\n")?;
 
-    write!(writer, "pub use surf;\n\n")?;
-
     for (endpoint, item) in paths {
         // this is so ugly omg 😭
         if let Some(operation) = &item.get {
-            generate_route(endpoint, "get", operation, &mut writer, components)?;
+            generate_route(endpoint, "GET", operation, &mut writer, components)?;
         }
         if let Some(operation) = &item.put {
-            generate_route(endpoint, "put", operation, &mut writer, components)?;
+            generate_route(endpoint, "PUT", operation, &mut writer, components)?;
         }
         if let Some(operation) = &item.post {
-            generate_route(endpoint, "post", operation, &mut writer, components)?;
+            generate_route(endpoint, "POST", operation, &mut writer, components)?;
         }
         if let Some(operation) = &item.delete {
-            generate_route(endpoint, "delete", operation, &mut writer, components)?;
+            generate_route(endpoint, "DELETE", operation, &mut writer, components)?;
         }
         if let Some(operation) = &item.patch {
-            generate_route(endpoint, "patch", operation, &mut writer, components)?;
+            generate_route(endpoint, "PATCH", operation, &mut writer, components)?;
         }
 
         // options, head, trace not yet supported
@@ -67,7 +72,7 @@ fn generate_route(
     method: &str,
     operation: &Operation,
     writer: &mut BufWriter<File>,
-    components: &Components
+    components: &Components,
 ) -> Result<()> {
     if let Some(description) = &operation.description {
         write!(writer, "/// {}\n", description)?;
@@ -79,7 +84,7 @@ fn generate_route(
         .ok_or_else(|| anyhow!("\"{} {}\" does not have operation_id", method, endpoint))?;
 
     write!(writer, "pub async fn {}(\n", method_name)?;
-    write!(writer, "    client: Client,\n")?;
+    write!(writer, "    client: ApiClient,\n")?;
 
     for raw_param in &operation.parameters {
         match resolve(ResolveTarget::Parameter(&Some(raw_param)), components)? {
@@ -97,12 +102,12 @@ fn generate_route(
                             schema.instance_type.as_ref(),
                             schema.reference.as_deref(),
                         )
-                            .with_context(|| {
-                                format!(
-                                    "Failed to map type for parameter {}. Schema: {:?}",
-                                    &parameter.name, schema
-                                )
-                            })?;
+                        .with_context(|| {
+                            format!(
+                                "Failed to map type for parameter {}. Schema: {:?}",
+                                &parameter.name, schema
+                            )
+                        })?;
 
                         let string: &str = type_.borrow();
                         write!(writer, "{}", string)?;
@@ -116,7 +121,10 @@ fn generate_route(
 
                 write!(writer, ",\n")?;
             }
-            Some(resolved) => bail!("resolved to unexpected type {:?}, expected `Parameter`", resolved),
+            Some(resolved) => bail!(
+                "resolved to unexpected type {:?}, expected `Parameter`",
+                resolved
+            ),
             None => {}
         }
     }
@@ -160,7 +168,10 @@ fn generate_route(
 
     write!(writer, ") -> Result<")?;
 
-    match resolve(ResolveTarget::Response(&operation.responses.responses.get("200")), components)? {
+    match resolve(
+        ResolveTarget::Response(&operation.responses.responses.get("200")),
+        components,
+    )? {
         Some(ResolvedReference::Responses(response)) => {
             let media_types: Vec<&MediaType> = response
                 .content
@@ -191,7 +202,10 @@ fn generate_route(
                 write!(writer, "()")?;
             }
         }
-        Some(resolved) => bail!("resolved to unexpected type {:?}, expected `Response`", resolved),
+        Some(resolved) => bail!(
+            "resolved to unexpected type {:?}, expected `Response`",
+            resolved
+        ),
         None => write!(writer, "()")?,
     }
 
@@ -212,14 +226,18 @@ fn generate_function_body(
     operation: &Operation,
     writer: &mut BufWriter<File>,
 ) -> Result<()> {
-    write!(writer, "    let response = client.{}(", method)?;
+    write!(
+        writer,
+        "    let response = client.request(Method::{}, ",
+        method
+    )?;
 
     // https://stackoverflow.com/a/413077/11494565
     let regex = Regex::new(r#"\{(.*?)\}"#).context("Failed to build regex")?;
     let matched_captures = regex.captures(endpoint);
 
     if let Some(captures) = matched_captures {
-        write!(writer, "format!(\"{}\", ", endpoint)?;
+        write!(writer, "&format!(\"{}\", ", endpoint)?;
 
         // The first argument of the captures iter is the overall match
         for option in captures.iter().skip(1) {
