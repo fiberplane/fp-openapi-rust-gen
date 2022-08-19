@@ -40,9 +40,10 @@ pub(crate) fn generate_crate(document: OpenApi, path: &Path) -> Result<()> {
 
     if let Some(components) = document.components {
         generate_models(&components, &src_directory)?;
+        generate_routes(&document.paths, &src_directory, &components)?;
     }
 
-    generate_routes(&document.paths, &src_directory)
+    Ok(())
 }
 
 fn open_manifest(path: &Path) -> Result<Manifest> {
@@ -90,6 +91,9 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
     // anyhow
     dependencies.insert("anyhow".to_string(), Dependency::Simple("1".to_string()));
 
+    // secrecy
+    dependencies.insert("secrecy".to_string(), Dependency::Simple("0".to_string()));
+
     // surf
     {
         let mut dependency = DependencyDetail::default();
@@ -108,6 +112,18 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
         dependency.branch = Some("main".to_string());
 
         dependencies.insert("base64uuid".to_string(), Dependency::Detailed(dependency));
+    }
+
+    // time
+    {
+        let mut dependency = DependencyDetail::default();
+        dependency.version = Some("0".to_string());
+        dependency.features.push("parsing".to_string());
+        dependency.features.push("formatting".to_string());
+        dependency.features.push("serde-human-readable".to_string());
+        dependency.features.push("serde-well-known".to_string());
+
+        dependencies.insert("time".to_string(), Dependency::Detailed(dependency));
     }
 
     Ok(())

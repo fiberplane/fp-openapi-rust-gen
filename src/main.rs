@@ -1,5 +1,4 @@
 #[forbid(unsafe_code)]
-
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use okapi::openapi3::OpenApi;
