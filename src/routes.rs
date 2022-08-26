@@ -129,9 +129,8 @@ fn generate_route(
         }
     }
 
-    match &operation.request_body {
-        Some(RefOr::Ref(_)) => unimplemented!("ref not implemented for request body"),
-        Some(RefOr::Object(body)) => {
+    match resolve(ResolveTarget::RequestBody(&operation.request_body.as_ref()), components)? {
+        Some(ResolvedReference::RequestBody(body)) => {
             let media_types: Vec<&MediaType> = body
                 .content
                 .iter()
@@ -163,6 +162,7 @@ fn generate_route(
                 write!(writer, "\n")?;
             }
         }
+        Some(resolved) => bail!("resolved to unexpected type {:?}, expected `RequestBody`", resolved),
         None => {}
     }
 
@@ -213,7 +213,7 @@ fn generate_route(
 
     write!(writer, "> {{\n")?;
 
-    generate_function_body(endpoint, method, operation, writer)?;
+    generate_function_body(endpoint, method, operation, writer, components)?;
 
     write!(writer, "\n}}\n\n")?;
 
@@ -225,6 +225,7 @@ fn generate_function_body(
     method: &str,
     operation: &Operation,
     writer: &mut BufWriter<File>,
+    components: &Components,
 ) -> Result<()> {
     write!(writer, "    let response = client.request(\n", )?;
     write!(writer, "        Method::{},\n", method)?;
@@ -252,6 +253,21 @@ fn generate_function_body(
     }
 
     write!(writer, "\n    )\n")?;
+
+    // Query strings as parameters
+
+    // Request body
+    if let Some(request_body) = &operation.request_body {
+        match resolve(ResolveTarget::RequestBody(&Some(request_body)), components)? {
+            Some(ResolvedReference::RequestBody(body)) => {
+
+
+
+            }
+            Some(resolved) => bail!("resolved to unexpected type {:?}, expected `RequestBody`", resolved),
+            None => write!(writer, "()")?,
+        }
+    }
 
     write!(writer, "        .send()\n")?;
     write!(writer, "        .await?;\n")?;

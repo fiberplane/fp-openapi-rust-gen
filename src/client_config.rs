@@ -141,8 +141,8 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
 fn generate_client_type(writer: &mut BufWriter<File>) -> Result<()> {
     write!(writer, "#[derive(Debug)]\n")?;
     write!(writer, "pub struct ApiClient {{\n")?;
-    write!(writer, "    client: Client,\n")?;
-    write!(writer, "    server: Url,\n")?;
+    write!(writer, "    pub client: Client,\n")?;
+    write!(writer, "    pub server: Url,\n")?;
     write!(writer, "}}\n\n")?;
 
     write!(writer, "impl ApiClient {{\n")?;
