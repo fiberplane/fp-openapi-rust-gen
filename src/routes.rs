@@ -32,7 +32,8 @@ pub(crate) fn generate_routes(
 
     let mut writer = BufWriter::new(file);
 
-    write!(writer, "#[forbid(unsafe_code)]\n\n")?;
+    write!(writer, "#![forbid(unsafe_code)]\n")?;
+    write!(writer, "#![allow(unused_variables)]\n\n")?;
 
     write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
     write!(writer, "use crate::clients::ApiClient;\n")?;
@@ -374,7 +375,7 @@ fn generate_function_body(
 
         write!(writer, "    Ok(response)")?;
     } else if is_none {
-        write!(writer, ";\n    Ok(())\n")?;
+        write!(writer, ";\n\n    Ok(())")?;
     } else {
         write!(writer, "\n        .bytes()\n")?;
         write!(writer, "        .await?;\n\n")?;
