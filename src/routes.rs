@@ -260,9 +260,13 @@ fn generate_function_body(
     if let Some(request_body) = &operation.request_body {
         match resolve(ResolveTarget::RequestBody(&Some(request_body)), components)? {
             Some(ResolvedReference::RequestBody(body)) => {
-
-
-
+                if body.content.get("application/json").is_some() {
+                    write!(writer, "        .json(&payload)\n")?;
+                } else if body.content.get("multipart/form-data").is_some() {
+                    write!(writer, "        .form(&payload)\n")?;
+                } else {
+                    eprintln!("Unsupported type(s): {:?}", body.content);
+                }
             }
             Some(resolved) => bail!("resolved to unexpected type {:?}, expected `RequestBody`", resolved),
             None => write!(writer, "()")?,
