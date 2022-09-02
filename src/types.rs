@@ -18,7 +18,7 @@ pub(crate) fn map_type<'a>(
         Some("byte") => "Vec<u8>".into(), // TODO: Deserialize from Base64
         Some("binary") => "Vec<u8>".into(),
         Some("date") | Some("date-time") => "time::OffsetDateTime".into(),
-        Some("password") => "SecureString".into(),
+        Some("password") => "secrecy::SecretString".into(),
         Some(_) | None => {
             if let Some(SingleOrVec::Single(instance_type)) = &instance_type {
                 match **instance_type {
