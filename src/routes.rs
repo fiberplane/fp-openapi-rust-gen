@@ -1,5 +1,5 @@
 use crate::types;
-use crate::types::{resolve, ResolveTarget, ResolvedReference};
+use crate::types::{map_type, resolve, ResolveTarget, ResolvedReference};
 use anyhow::{anyhow, bail, Context, Result};
 use convert_case::{Case, Casing};
 use okapi::openapi3::{
@@ -8,9 +8,11 @@ use okapi::openapi3::{
 };
 use okapi::Map;
 use regex::Regex;
+use schemars::schema::{Schema, SingleOrVec};
 use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
+use std::ops::Deref;
 use std::path::PathBuf;
 
 pub(crate) fn generate_routes(
@@ -179,33 +181,53 @@ fn generate_route(
         components,
     )? {
         Some(ResolvedReference::Responses(response)) => {
-            let media_types: Vec<&MediaType> = response
-                .content
-                .iter()
-                .filter_map(|(content_type, media_type)| {
-                    if content_type == "application/json" {
-                        Some(media_type)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            if let Some(json_type) = media_types.first() {
-                let schema = json_type
-                    .schema
-                    .as_ref()
-                    .ok_or_else(|| anyhow!("need a schema"))?;
-
-                if let Some(reference) = &schema.reference {
-                    if let Some((_, reference_name)) = reference.rsplit_once('/') {
-                        write!(writer, "models::{}", reference_name.to_case(Case::Pascal))?;
-                    } else {
-                        write!(writer, "models::{}", reference.to_case(Case::Pascal))?;
-                    }
-                }
-            } else {
+            if response.content.is_empty() {
                 write!(writer, "()")?;
+            } else {
+                if let Some(json_media) = response.content.get("application/json") {
+                    let schema = json_media
+                        .schema
+                        .as_ref()
+                        .ok_or_else(|| anyhow!("need a schema"))?;
+
+                    if let Some(reference) = &schema.reference {
+                        if let Some((_, reference_name)) = reference.rsplit_once('/') {
+                            write!(writer, "models::{}", reference_name.to_case(Case::Pascal))?;
+                        } else {
+                            write!(writer, "models::{}", reference.to_case(Case::Pascal))?;
+                        }
+                    } else if let Some(array) = &schema.array {
+                        match &array.items {
+                            Some(SingleOrVec::Single(single)) => match single.deref() {
+                                Schema::Bool(_) => eprintln!("unsupported bool for array items"),
+                                Schema::Object(schema) => {
+                                    let type_ = map_type(
+                                        schema.format.as_deref(),
+                                        schema.instance_type.as_ref(),
+                                        schema.reference.as_deref(),
+                                    )?;
+                                    write!(writer, "Vec<{}>", type_)?;
+                                }
+                            },
+                            Some(SingleOrVec::Vec(vec)) => {
+                                eprintln!("unsupported multiple items vec {:?}", vec)
+                            }
+                            None => eprintln!("type is array but has no items? {:?}", schema),
+                        }
+                    } else {
+                        let type_ = map_type(
+                            schema.format.as_deref(),
+                            schema.instance_type.as_ref(),
+                            schema.reference.as_deref(),
+                        )?;
+                        write!(writer, "{}", type_)?;
+                    }
+                } else if response.content.get("text/plain").is_some() {
+                    write!(writer, "String")?;
+                } else {
+                    eprintln!("unknown response mime type: {:?}", response.content);
+                    write!(writer, "Vec<u8>")?;
+                }
             }
         }
         Some(resolved) => bail!(
