@@ -278,7 +278,7 @@ fn generate_function_body(
     is_none: bool,
     is_text: bool,
 ) -> Result<()> {
-    write!(writer, "    let response = client.request(\n",)?;
+    write!(writer, "    let mut builder = client.request(\n",)?;
     write!(writer, "        Method::{},\n", method)?;
 
     // https://stackoverflow.com/a/413077/11494565
@@ -303,7 +303,7 @@ fn generate_function_body(
         write!(writer, "        \"{}\"", endpoint)?;
     }
 
-    write!(writer, "\n    )\n")?;
+    write!(writer, "\n    );\n")?;
 
     // Query strings as parameters
     for ref_or in &operation.parameters {
@@ -317,23 +317,19 @@ fn generate_function_body(
                     "query" => {
                         let parameter_name = parameter.name.to_case(Case::Snake);
 
-                        write!(writer, "        .query(")?;
-
                         if !parameter.required {
                             write!(
                                 writer,
-                                "if let Some({}) = {} {{\n            ",
+                                "    if let Some({}) = {} {{\n",
                                 parameter_name, parameter_name
                             )?;
                         }
 
-                        write!(writer, "&[(\"{}\", {})]", parameter.name, parameter_name)?;
+                        write!(writer, "        builder = builder.query(&[(\"{}\", {})]);\n", parameter.name, parameter_name)?;
 
                         if !parameter.required {
-                            write!(writer, "\n        }} else {{\n            &[]\n        }}")?;
+                            write!(writer, "    }}\n")?;
                         }
-
-                        write!(writer, ")\n")?;
                     }
                     location => eprintln!("unknown `in`: {}", location),
                 }
@@ -346,9 +342,9 @@ fn generate_function_body(
         match resolve(ResolveTarget::RequestBody(&Some(request_body)), components)? {
             Some(ResolvedReference::RequestBody(body)) => {
                 if body.content.get("application/json").is_some() {
-                    write!(writer, "        .json(&payload)\n")?;
+                    write!(writer, "    builder = builder.json(&payload);\n")?;
                 } else if body.content.get("multipart/form-data").is_some() {
-                    write!(writer, "        .form(&payload)\n")?;
+                    write!(writer, "    builder = builder.form(&payload);\n")?;
                 } else {
                     eprintln!("Unsupported type(s): {:?}", body.content);
                 }
@@ -361,7 +357,7 @@ fn generate_function_body(
         }
     }
 
-    write!(writer, "        .send()\n")?;
+    write!(writer, "    let response = builder.send()\n")?;
     write!(writer, "        .await?")?;
 
     // Response
