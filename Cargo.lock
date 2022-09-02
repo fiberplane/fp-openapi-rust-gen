@@ -3,6 +3,7 @@
 version = 3
 
 [[package]]
+[[package]]
 name = "aho-corasick"
 version = "0.7.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -103,6 +104,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
 
 [[package]]
+name = "fp-openapi-rust-gen"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "cargo_toml",
+ "check_keyword",
+ "clap",
+ "convert_case",
+ "okapi",
+ "regex",
+ "schemars",
+ "serde",
+ "serde_yaml",
+ "toml",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -167,23 +185,6 @@ name = "once_cell"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
-
-[[package]]
-name = "openapi-hackday-gen"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "cargo_toml",
- "check_keyword",
- "clap",
- "convert_case",
- "okapi",
- "regex",
- "schemars",
- "serde",
- "serde_yaml",
- "toml",
-]
 
 [[package]]
 name = "os_str_bytes"
