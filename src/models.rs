@@ -8,6 +8,7 @@ use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
+use crate::types::map_type;
 
 pub(crate) fn generate_models(components: &Components, src_path: &PathBuf) -> Result<()> {
     let models_path = src_path.join("models");
@@ -92,40 +93,8 @@ fn generate_normal_field(
         write!(writer, "Option<")?;
     }
 
-    match schema.format.as_deref() {
-        Some("base64uuid") => write!(writer, "base64uuid::Base64Uuid")?,
-        Some("int32") => write!(writer, "i32")?,
-        Some("int64") => write!(writer, "i64")?,
-        Some("float") => write!(writer, "f32")?,
-        Some("double") => write!(writer, "f64")?,
-        Some("byte") => write!(writer, "Vec<u8>")?, // TODO: Deserialize from Base64
-        Some("binary") => write!(writer, "Vec<u8>")?,
-        Some("date") | Some("date-time") => write!(writer, "time::OffsetDateTime")?,
-        Some("password") => write!(writer, "SecureString")?,
-        Some(_) | None => {
-            if let Some(SingleOrVec::Single(instance_type)) = &schema.instance_type {
-                match **instance_type {
-                    InstanceType::Null => write!(writer, "()")?,
-                    InstanceType::Boolean => write!(writer, "bool")?,
-                    InstanceType::Object => {
-                        write!(writer, "std::collections::HashMap<String, String>")?
-                    }
-                    InstanceType::Array => write!(writer, "Vec<serde_json::Value>")?,
-                    InstanceType::Number => write!(writer, "i64")?,
-                    InstanceType::String => write!(writer, "String")?,
-                    InstanceType::Integer => write!(writer, "i32")?,
-                }
-            } else if let Some(reference) = &schema.reference {
-                if let Some((_, reference_name)) = reference.rsplit_once('/') {
-                    write!(writer, "models::{}", reference_name.to_case(Case::Pascal))?;
-                } else {
-                    write!(writer, "models::{}", reference.to_case(Case::Pascal))?;
-                }
-            } else {
-                bail!("Failed to write field {}. Schema: {:?}", name, schema);
-            }
-        }
-    }
+    let type_ = map_type(schema.format.as_deref(), schema.instance_type.as_ref(), schema.reference.as_deref())?;
+    write!(writer, "{}", type_)?;
 
     if !required {
         write!(writer, ">")?;
