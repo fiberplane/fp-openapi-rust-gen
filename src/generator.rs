@@ -39,7 +39,7 @@ pub(crate) fn generate_crate(document: OpenApi, path: &Path) -> Result<()> {
     generate_client_configs(&document.servers, &src_directory)?;
 
     if let Some(components) = document.components {
-        generate_models(&components, &src_directory)?;
+        //generate_models(&components, &src_directory)?;
         generate_routes(&document.paths, &src_directory, &components)?;
     }
 
@@ -114,6 +114,15 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
         dependency.branch = Some("main".to_string());
 
         dependencies.insert("base64uuid".to_string(), Dependency::Detailed(dependency));
+    }
+
+    // fiberplane
+    {
+        let mut dependency = DependencyDetail::default();
+        dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
+        dependency.branch = Some("main".to_string());
+
+        dependencies.insert("fiberplane".to_string(), Dependency::Detailed(dependency));
     }
 
     // time

@@ -37,10 +37,11 @@ pub(crate) fn generate_routes(
 
     write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
     write!(writer, "use crate::clients::ApiClient;\n")?;
+    write!(writer, "use fiberplane::protocols::core as models;\n")?;
     write!(writer, "use reqwest::Method;\n\n")?;
 
-    write!(writer, "pub mod clients;\n")?;
-    write!(writer, "pub mod models;\n\n")?;
+    write!(writer, "pub mod clients;\n\n")?;
+    //write!(writer, "pub mod models;\n\n")?;
 
     for (endpoint, item) in paths {
         // this is so ugly omg 😭
