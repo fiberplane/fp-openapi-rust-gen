@@ -283,19 +283,19 @@ fn generate_function_body(
 
     // https://stackoverflow.com/a/413077/11494565
     let regex = Regex::new(r#"\{(.*?)\}"#).context("Failed to build regex")?;
-    let matched_captures = regex.captures(endpoint);
+    let mut arguments = vec![];
 
-    if let Some(captures) = matched_captures {
+    for captures in regex.captures_iter(endpoint) {
+        let capture = captures.get(1).ok_or_else(|| anyhow!("unreachable: always two capture groups (0 + 1)"))?;
+
+        arguments.push(capture.as_str());
+    }
+
+    if !arguments.is_empty() {
         write!(writer, "        &format!(\"{}\", ", endpoint)?;
 
-        // The first argument of the captures iter is the overall match
-        for option in captures.iter().skip(1) {
-            if let Some(matched) = option {
-                let matched_str = matched.as_str();
-                let arg = matched_str.replacen("{", "", 1).replacen("}", "", 1);
-
-                write!(writer, "{} = {}, ", arg, arg.to_case(Case::Snake))?;
-            }
+        for arg in arguments {
+            write!(writer, "{} = {}, ", arg, arg.to_case(Case::Snake))?;
         }
 
         write!(writer, ")")?;
