@@ -255,6 +255,36 @@ fn generate_function_body(
     write!(writer, "\n    )\n")?;
 
     // Query strings as parameters
+    for ref_or in &operation.parameters {
+        let option = Some(ref_or);
+        let option = resolve(ResolveTarget::Parameter(&option), components)?;
+
+        if let Some(resolved_reference) = option {
+            if let ResolvedReference::Parameter(parameter) = resolved_reference {
+                match parameter.location.as_str() {
+                    "path" => continue,
+                    "query" => {
+                        let parameter_name = parameter.name.to_case(Case::Snake);
+
+                        write!(writer, "        .query(")?;
+
+                        if !parameter.required {
+                            write!(writer, "if let Some({}) = {} {{\n            ", parameter_name, parameter_name)?;
+                        }
+
+                        write!(writer, "&[(\"{}\", {})]", parameter.name, parameter_name)?;
+
+                        if !parameter.required {
+                            write!(writer, "\n        }} else {{\n            &[]\n        }}")?;
+                        }
+
+                        write!(writer, ")\n")?;
+                    }
+                    location => eprintln!("unknown `in`: {}", location)
+                }
+            }
+        }
+    }
 
     // Request body
     if let Some(request_body) = &operation.request_body {

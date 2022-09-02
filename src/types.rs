@@ -153,7 +153,7 @@ pub(crate) fn resolve<'a>(
     })
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum ResolvedReference<'a> {
     Schema(Cow<'a, SchemaObject>),
     Parameter(Cow<'a, Parameter>),
