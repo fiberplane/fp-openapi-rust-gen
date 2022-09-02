@@ -44,19 +44,19 @@ pub(crate) fn generate_routes(
     for (endpoint, item) in paths {
         // this is so ugly omg 😭
         if let Some(operation) = &item.get {
-            generate_route(endpoint, "GET", operation, &mut writer, components)?;
+            generate_route(endpoint, "GET", operation, &item.parameters, &mut writer, components)?;
         }
         if let Some(operation) = &item.put {
-            generate_route(endpoint, "PUT", operation, &mut writer, components)?;
+            generate_route(endpoint, "PUT", operation, &item.parameters, &mut writer, components)?;
         }
         if let Some(operation) = &item.post {
-            generate_route(endpoint, "POST", operation, &mut writer, components)?;
+            generate_route(endpoint, "POST", operation, &item.parameters, &mut writer, components)?;
         }
         if let Some(operation) = &item.delete {
-            generate_route(endpoint, "DELETE", operation, &mut writer, components)?;
+            generate_route(endpoint, "DELETE", operation, &item.parameters, &mut writer, components)?;
         }
         if let Some(operation) = &item.patch {
-            generate_route(endpoint, "PATCH", operation, &mut writer, components)?;
+            generate_route(endpoint, "PATCH", operation, &item.parameters, &mut writer, components)?;
         }
 
         // options, head, trace not yet supported
@@ -73,6 +73,7 @@ fn generate_route(
     endpoint: &str,
     method: &str,
     operation: &Operation,
+    shared_parameters: &Vec<RefOr<Parameter>>,
     writer: &mut BufWriter<File>,
     components: &Components,
 ) -> Result<()> {
@@ -88,7 +89,7 @@ fn generate_route(
     write!(writer, "pub async fn {}(\n", method_name)?;
     write!(writer, "    client: ApiClient,\n")?;
 
-    for raw_param in &operation.parameters {
+    for raw_param in shared_parameters.iter().chain(&operation.parameters) {
         match resolve(ResolveTarget::Parameter(&Some(raw_param)), components)? {
             Some(ResolvedReference::Parameter(parameter)) => {
                 write!(writer, "    {}: ", &parameter.name.to_case(Case::Snake))?;
@@ -291,7 +292,7 @@ fn generate_function_body(
                 let matched_str = matched.as_str();
                 let arg = matched_str.replacen("{", "", 1).replacen("}", "", 1);
 
-                write!(writer, "{} = {}, ", arg, arg)?;
+                write!(writer, "{} = {}, ", arg, arg.to_case(Case::Snake))?;
             }
         }
 
