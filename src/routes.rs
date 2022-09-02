@@ -176,12 +176,18 @@ fn generate_route(
 
     write!(writer, ") -> Result<")?;
 
+    // State, TODO: Change this to be a struct or make the whole generation process have state
+    let mut is_json = false;
+    let mut is_none = false;
+    let mut is_text = false;
+
     match resolve(
         ResolveTarget::Response(&operation.responses.responses.get("200")),
         components,
     )? {
         Some(ResolvedReference::Responses(response)) => {
             if response.content.is_empty() {
+                is_none = true;
                 write!(writer, "()")?;
             } else {
                 if let Some(json_media) = response.content.get("application/json") {
@@ -220,13 +226,21 @@ fn generate_route(
                             schema.instance_type.as_ref(),
                             schema.reference.as_deref(),
                         )?;
+
+                        if type_ == "()" {
+                            is_none = true;
+                        }
+
                         write!(writer, "{}", type_)?;
                     }
+
+                    is_json = true;
                 } else if response.content.get("text/plain").is_some() {
+                    is_text = true;
                     write!(writer, "String")?;
                 } else {
                     eprintln!("unknown response mime type: {:?}", response.content);
-                    write!(writer, "Vec<u8>")?;
+                    write!(writer, "bytes::Bytes")?;
                 }
             }
         }
@@ -234,14 +248,17 @@ fn generate_route(
             "resolved to unexpected type {:?}, expected `Response`",
             resolved
         ),
-        None => write!(writer, "()")?,
+        None => {
+            write!(writer, "()")?;
+            is_none = true;
+        },
     }
 
     // RETURN TYPE
 
     write!(writer, "> {{\n")?;
 
-    generate_function_body(endpoint, method, operation, writer, components)?;
+    generate_function_body(endpoint, method, operation, writer, components, is_json, is_none, is_text)?;
 
     write!(writer, "\n}}\n\n")?;
 
@@ -254,6 +271,9 @@ fn generate_function_body(
     operation: &Operation,
     writer: &mut BufWriter<File>,
     components: &Components,
+    is_json: bool,
+    is_none: bool,
+    is_text: bool,
 ) -> Result<()> {
     write!(writer, "    let response = client.request(\n",)?;
     write!(writer, "        Method::{},\n", method)?;
@@ -339,7 +359,27 @@ fn generate_function_body(
     }
 
     write!(writer, "        .send()\n")?;
-    write!(writer, "        .await?;\n")?;
+    write!(writer, "        .await?")?;
+
+    // Response
+    if is_json {
+        write!(writer, "\n        .json()\n")?;
+        write!(writer, "        .await?;\n\n")?;
+
+        write!(writer, "    Ok(response)")?;
+    } else if is_text {
+        write!(writer, "\n        .text()\n")?;
+        write!(writer, "        .await?;\n\n")?;
+
+        write!(writer, "    Ok(response)")?;
+    } else if is_none {
+        write!(writer, ";\n    Ok(())\n")?;
+    } else {
+        write!(writer, "\n        .bytes()\n")?;
+        write!(writer, "        .await?;\n\n")?;
+
+        write!(writer, "    Ok(response)")?;
+    }
 
     Ok(())
 }

@@ -128,5 +128,7 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
         dependencies.insert("time".to_string(), Dependency::Detailed(dependency));
     }
 
+    dependencies.insert("bytes".to_string(), Dependency::Simple("1".to_string()));
+
     Ok(())
 }
