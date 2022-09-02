@@ -1,3 +1,4 @@
+use crate::types::map_type;
 use anyhow::{anyhow, bail, Context, Result};
 use check_keyword::CheckKeyword;
 use convert_case::{Case, Casing};
@@ -8,7 +9,6 @@ use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
-use crate::types::map_type;
 
 pub(crate) fn generate_models(components: &Components, src_path: &PathBuf) -> Result<()> {
     let models_path = src_path.join("models");
@@ -93,7 +93,11 @@ fn generate_normal_field(
         write!(writer, "Option<")?;
     }
 
-    let type_ = map_type(schema.format.as_deref(), schema.instance_type.as_ref(), schema.reference.as_deref())?;
+    let type_ = map_type(
+        schema.format.as_deref(),
+        schema.instance_type.as_ref(),
+        schema.reference.as_deref(),
+    )?;
     write!(writer, "{}", type_)?;
 
     if !required {

@@ -129,7 +129,10 @@ fn generate_route(
         }
     }
 
-    match resolve(ResolveTarget::RequestBody(&operation.request_body.as_ref()), components)? {
+    match resolve(
+        ResolveTarget::RequestBody(&operation.request_body.as_ref()),
+        components,
+    )? {
         Some(ResolvedReference::RequestBody(body)) => {
             let media_types: Vec<&MediaType> = body
                 .content
@@ -162,7 +165,10 @@ fn generate_route(
                 write!(writer, "\n")?;
             }
         }
-        Some(resolved) => bail!("resolved to unexpected type {:?}, expected `RequestBody`", resolved),
+        Some(resolved) => bail!(
+            "resolved to unexpected type {:?}, expected `RequestBody`",
+            resolved
+        ),
         None => {}
     }
 
@@ -227,7 +233,7 @@ fn generate_function_body(
     writer: &mut BufWriter<File>,
     components: &Components,
 ) -> Result<()> {
-    write!(writer, "    let response = client.request(\n", )?;
+    write!(writer, "    let response = client.request(\n",)?;
     write!(writer, "        Method::{},\n", method)?;
 
     // https://stackoverflow.com/a/413077/11494565
@@ -269,7 +275,11 @@ fn generate_function_body(
                         write!(writer, "        .query(")?;
 
                         if !parameter.required {
-                            write!(writer, "if let Some({}) = {} {{\n            ", parameter_name, parameter_name)?;
+                            write!(
+                                writer,
+                                "if let Some({}) = {} {{\n            ",
+                                parameter_name, parameter_name
+                            )?;
                         }
 
                         write!(writer, "&[(\"{}\", {})]", parameter.name, parameter_name)?;
@@ -280,7 +290,7 @@ fn generate_function_body(
 
                         write!(writer, ")\n")?;
                     }
-                    location => eprintln!("unknown `in`: {}", location)
+                    location => eprintln!("unknown `in`: {}", location),
                 }
             }
         }
@@ -298,7 +308,10 @@ fn generate_function_body(
                     eprintln!("Unsupported type(s): {:?}", body.content);
                 }
             }
-            Some(resolved) => bail!("resolved to unexpected type {:?}, expected `RequestBody`", resolved),
+            Some(resolved) => bail!(
+                "resolved to unexpected type {:?}, expected `RequestBody`",
+                resolved
+            ),
             None => write!(writer, "()")?,
         }
     }

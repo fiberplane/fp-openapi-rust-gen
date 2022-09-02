@@ -108,7 +108,7 @@ impl ResolveTarget<'_> {
                     RefOr::Ref(_) => panic!("called `unpack_responses` on Responses(Ref(..))"),
                     RefOr::Object(object) => object.clone(),
                 }
-            },
+            }
             ResolveTarget::RequestBody(_) => panic!("called `unpack_responses` on RequestBody(..)"),
         }
     }
@@ -124,7 +124,7 @@ impl ResolveTarget<'_> {
                     RefOr::Ref(_) => panic!("called `unpack_request_body` on RequestBody(Ref(..))"),
                     RefOr::Object(object) => object.clone(),
                 }
-            },
+            }
         }
     }
 }
