@@ -46,19 +46,54 @@ pub(crate) fn generate_routes(
     for (endpoint, item) in paths {
         // this is so ugly omg 😭
         if let Some(operation) = &item.get {
-            generate_route(endpoint, "GET", operation, &item.parameters, &mut writer, components)?;
+            generate_route(
+                endpoint,
+                "GET",
+                operation,
+                &item.parameters,
+                &mut writer,
+                components,
+            )?;
         }
         if let Some(operation) = &item.put {
-            generate_route(endpoint, "PUT", operation, &item.parameters, &mut writer, components)?;
+            generate_route(
+                endpoint,
+                "PUT",
+                operation,
+                &item.parameters,
+                &mut writer,
+                components,
+            )?;
         }
         if let Some(operation) = &item.post {
-            generate_route(endpoint, "POST", operation, &item.parameters, &mut writer, components)?;
+            generate_route(
+                endpoint,
+                "POST",
+                operation,
+                &item.parameters,
+                &mut writer,
+                components,
+            )?;
         }
         if let Some(operation) = &item.delete {
-            generate_route(endpoint, "DELETE", operation, &item.parameters, &mut writer, components)?;
+            generate_route(
+                endpoint,
+                "DELETE",
+                operation,
+                &item.parameters,
+                &mut writer,
+                components,
+            )?;
         }
         if let Some(operation) = &item.patch {
-            generate_route(endpoint, "PATCH", operation, &item.parameters, &mut writer, components)?;
+            generate_route(
+                endpoint,
+                "PATCH",
+                operation,
+                &item.parameters,
+                &mut writer,
+                components,
+            )?;
         }
 
         // options, head, trace not yet supported
@@ -89,7 +124,7 @@ fn generate_route(
         .ok_or_else(|| anyhow!("\"{} {}\" does not have operation_id", method, endpoint))?;
 
     write!(writer, "pub async fn {}(\n", method_name)?;
-    write!(writer, "    client: ApiClient,\n")?;
+    write!(writer, "    client: &ApiClient,\n")?;
 
     for raw_param in shared_parameters.iter().chain(&operation.parameters) {
         match resolve(ResolveTarget::Parameter(&Some(raw_param)), components)? {
@@ -143,16 +178,23 @@ fn generate_route(
                 .content
                 .iter()
                 .filter_map(|(content_type, media_type)| {
-                    if content_type == "application/json" || content_type == "multipart/form-data" {
+                    if content_type == "application/json"
+                        || content_type == "multipart/form-data"
+                        || content_type == "application/octet-stream"
+                    {
                         Some(media_type)
                     } else {
+                        eprintln!(
+                            "warn: found \"{}\", expected json, form data or octet stream",
+                            content_type
+                        );
                         None
                     }
                 })
                 .collect();
             let json_type = media_types
                 .first()
-                .ok_or_else(|| anyhow!("only json/form-data supported"))?;
+                .ok_or_else(|| anyhow!("unknown media type"))?;
             let schema = json_type
                 .schema
                 .as_ref()
@@ -254,14 +296,16 @@ fn generate_route(
         None => {
             write!(writer, "()")?;
             is_none = true;
-        },
+        }
     }
 
     // RETURN TYPE
 
     write!(writer, "> {{\n")?;
 
-    generate_function_body(endpoint, method, operation, writer, components, is_json, is_none, is_text)?;
+    generate_function_body(
+        endpoint, method, operation, writer, components, is_json, is_none, is_text,
+    )?;
 
     write!(writer, "\n}}\n\n")?;
 
@@ -286,7 +330,9 @@ fn generate_function_body(
     let mut arguments = vec![];
 
     for captures in regex.captures_iter(endpoint) {
-        let capture = captures.get(1).ok_or_else(|| anyhow!("unreachable: always two capture groups (0 + 1)"))?;
+        let capture = captures
+            .get(1)
+            .ok_or_else(|| anyhow!("unreachable: always two capture groups (0 + 1)"))?;
 
         arguments.push(capture.as_str());
     }
@@ -325,7 +371,11 @@ fn generate_function_body(
                             )?;
                         }
 
-                        write!(writer, "        builder = builder.query(&[(\"{}\", {})]);\n", parameter.name, parameter_name)?;
+                        write!(
+                            writer,
+                            "        builder = builder.query(&[(\"{}\", {})]);\n",
+                            parameter.name, parameter_name
+                        )?;
 
                         if !parameter.required {
                             write!(writer, "    }}\n")?;
@@ -345,6 +395,8 @@ fn generate_function_body(
                     write!(writer, "    builder = builder.json(&payload);\n")?;
                 } else if body.content.get("multipart/form-data").is_some() {
                     write!(writer, "    builder = builder.form(&payload);\n")?;
+                } else if body.content.get("application/octet-stream").is_some() {
+                    write!(writer, "    builder = builder.body(&payload);\n")?;
                 } else {
                     eprintln!("Unsupported type(s): {:?}", body.content);
                 }
