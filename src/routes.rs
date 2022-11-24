@@ -45,7 +45,7 @@ pub(crate) fn generate_routes(
 
     write!(writer, "pub mod models {{\n")?;
     write!(writer, "    pub use fiberplane::protocols::core::*;\n")?;
-    write!(writer, "    pub use fp_templates::types::*;\n")?;
+    write!(writer, "    pub use fp_templates::*;\n")?;
     write!(writer, "}}\n\n")?;
 
     for (endpoint, item) in paths {
