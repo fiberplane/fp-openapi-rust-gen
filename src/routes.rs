@@ -34,7 +34,8 @@ pub(crate) fn generate_routes(
 
     write!(writer, "#![forbid(unsafe_code)]\n")?;
     write!(writer, "#![allow(unused_mut)]\n")?;
-    write!(writer, "#![allow(unused_variables)]\n\n")?;
+    write!(writer, "#![allow(unused_variables)]\n")?;
+    write!(writer, "#![allow(unused_imports)]\n\n")?;
 
     write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
     write!(writer, "use crate::clients::ApiClient;\n")?;
