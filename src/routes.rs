@@ -33,15 +33,20 @@ pub(crate) fn generate_routes(
     let mut writer = BufWriter::new(file);
 
     write!(writer, "#![forbid(unsafe_code)]\n")?;
+    write!(writer, "#![allow(unused_mut)]\n")?;
     write!(writer, "#![allow(unused_variables)]\n\n")?;
 
     write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
     write!(writer, "use crate::clients::ApiClient;\n")?;
-    write!(writer, "use fiberplane::protocols::core as models;\n")?;
     write!(writer, "use reqwest::Method;\n\n")?;
 
     write!(writer, "pub mod clients;\n\n")?;
     //write!(writer, "pub mod models;\n\n")?;
+
+    write!(writer, "pub mod models {{\n")?;
+    write!(writer, "    pub use fiberplane::protocols::core::*;\n")?;
+    write!(writer, "    pub use fp_templates::types::*;\n")?;
+    write!(writer, "}}\n\n")?;
 
     for (endpoint, item) in paths {
         // this is so ugly omg 😭
