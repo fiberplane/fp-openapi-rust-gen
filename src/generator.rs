@@ -10,7 +10,11 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
-pub(crate) fn generate_crate(document: OpenApi, path: &Path) -> Result<()> {
+pub(crate) fn generate_crate(
+    document: OpenApi,
+    path: &Path,
+    local_dependencies: bool,
+) -> Result<()> {
     let status = Command::new("cargo")
         .arg("new")
         .arg("--quiet")
@@ -32,7 +36,7 @@ pub(crate) fn generate_crate(document: OpenApi, path: &Path) -> Result<()> {
         }
     }
 
-    edit_cargo_toml(path)?;
+    edit_cargo_toml(path, local_dependencies)?;
 
     let src_directory = path.join("src");
 
@@ -50,7 +54,7 @@ fn open_manifest(path: &Path) -> Result<Manifest> {
     Ok(Manifest::from_path(path).context("Failed to parse `Cargo.toml`")?)
 }
 
-fn edit_cargo_toml(path: &Path) -> Result<()> {
+fn edit_cargo_toml(path: &Path, local_dependencies: bool) -> Result<()> {
     let path = path.join("Cargo.toml");
 
     // https://stackoverflow.com/a/50691004/11494565
@@ -63,7 +67,7 @@ fn edit_cargo_toml(path: &Path) -> Result<()> {
         .context("Failed to open or create `Cargo.toml`")?;
 
     let mut manifest = open_manifest(&path)?;
-    add_dependencies(&mut manifest.dependencies)?;
+    add_dependencies(&mut manifest.dependencies, local_dependencies)?;
 
     let serialized = toml::to_string(&manifest).context("Failed to serialize `Cargo.toml`")?;
     file.write_all(serialized.as_bytes())
@@ -72,7 +76,7 @@ fn edit_cargo_toml(path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
+fn add_dependencies(dependencies: &mut DepsSet, local_dependencies: bool) -> Result<()> {
     // serde
     {
         let mut dependency = DependencyDetail::default();
@@ -108,22 +112,22 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
     }
 
     // base64uuid
-    {
-        let mut dependency = DependencyDetail::default();
-        dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
-        dependency.branch = Some("main".to_string());
-
-        dependencies.insert("base64uuid".to_string(), Dependency::Detailed(dependency));
-    }
+    dependencies.insert(
+        "base64uuid".to_string(),
+        fp_dependency("base64uuid", local_dependencies),
+    );
 
     // fiberplane
-    {
-        let mut dependency = DependencyDetail::default();
-        dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
-        dependency.branch = Some("main".to_string());
+    dependencies.insert(
+        "fiberplane".to_string(),
+        fp_dependency("fiberplane", local_dependencies),
+    );
 
-        dependencies.insert("fiberplane".to_string(), Dependency::Detailed(dependency));
-    }
+    // fp-templates
+    dependencies.insert(
+        "fp-templates".to_string(),
+        fp_dependency("fp-templates", local_dependencies),
+    );
 
     // time
     {
@@ -140,4 +144,18 @@ fn add_dependencies(dependencies: &mut DepsSet) -> Result<()> {
     dependencies.insert("bytes".to_string(), Dependency::Simple("1".to_string()));
 
     Ok(())
+}
+
+/// declare a dependency which lives within the fiberplane-rs repository
+fn fp_dependency(name: &str, local_dependency: bool) -> Dependency {
+    let mut dependency = DependencyDetail::default();
+
+    if local_dependency {
+        dependency.path = Some(format!("../{name}"));
+    } else {
+        dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
+        dependency.branch = Some("main".to_string());
+    }
+
+    Dependency::Detailed(dependency)
 }

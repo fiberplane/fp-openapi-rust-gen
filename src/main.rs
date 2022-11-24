@@ -51,7 +51,7 @@ fn main() -> Result<()> {
         }
     }
 
-    generator::generate_crate(document, output)
+    generator::generate_crate(document, output, args.local)
 }
 
 #[derive(Parser, Debug)]
@@ -63,6 +63,9 @@ struct Args {
     /// Path to the crate that will be generated
     #[clap(short, long, parse(from_os_str), required = true)]
     output: PathBuf,
+    /// Whenever fiberplane-rs dependencies are located locally relative to the output crate
+    #[clap(short, long)]
+    local: bool,
     /// Force overwriting of crate path if it exists
     #[clap(short, long)]
     force: bool,
