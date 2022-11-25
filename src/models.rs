@@ -1,9 +1,9 @@
 use crate::types::map_type;
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result};
 use check_keyword::CheckKeyword;
 use convert_case::{Case, Casing};
 use okapi::openapi3::{Components, SchemaObject};
-use schemars::schema::{InstanceType, Schema, SingleOrVec};
+use schemars::schema::Schema;
 use schemars::Set;
 use std::fs;
 use std::fs::File;
