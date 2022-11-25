@@ -1,11 +1,9 @@
 use crate::client_config::generate_client_configs;
-use crate::models::generate_models;
 use crate::routes::generate_routes;
 use anyhow::{anyhow, bail, Context, Result};
 use cargo_toml::{Dependency, DependencyDetail, DepsSet, Manifest};
 use okapi::openapi3::OpenApi;
-use std::fs;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;

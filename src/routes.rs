@@ -3,8 +3,7 @@ use crate::types::{map_type, resolve, ResolveTarget, ResolvedReference};
 use anyhow::{anyhow, bail, Context, Result};
 use convert_case::{Case, Casing};
 use okapi::openapi3::{
-    Components, MediaType, Operation, Parameter, ParameterValue, PathItem, RefOr, RequestBody,
-    Response,
+    Components, MediaType, Operation, Parameter, ParameterValue, PathItem, RefOr,
 };
 use okapi::Map;
 use regex::Regex;
@@ -216,6 +215,15 @@ fn generate_route(
                 }
 
                 write!(writer, "\n")?;
+            } else {
+                // inline type
+                let type_ = map_type(
+                    schema.format.as_deref(),
+                    schema.instance_type.as_ref(),
+                    schema.reference.as_deref(),
+                )?;
+
+                write!(writer, "    payload: {},\n", type_)?;
             }
         }
         Some(resolved) => bail!(
@@ -402,7 +410,7 @@ fn generate_function_body(
                 } else if body.content.get("multipart/form-data").is_some() {
                     write!(writer, "    builder = builder.form(&payload);\n")?;
                 } else if body.content.get("application/octet-stream").is_some() {
-                    write!(writer, "    builder = builder.body(&payload);\n")?;
+                    write!(writer, "    builder = builder.body(payload);\n")?;
                 } else {
                     eprintln!("Unsupported type(s): {:?}", body.content);
                 }

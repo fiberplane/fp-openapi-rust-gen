@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 use convert_case::{Case, Casing};
-use okapi::openapi3::{Components, Parameter, RefOr, RequestBody, Response, Responses};
-use schemars::schema::{InstanceType, Schema, SchemaObject, SingleOrVec};
+use okapi::openapi3::{Components, Parameter, RefOr, RequestBody, Response};
+use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 use std::borrow::Cow;
 
 pub(crate) fn map_type<'a>(
