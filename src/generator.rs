@@ -1,11 +1,9 @@
 use crate::client_config::generate_client_configs;
-use crate::models::generate_models;
 use crate::routes::generate_routes;
 use anyhow::{anyhow, bail, Context, Result};
 use cargo_toml::{Dependency, DependencyDetail, DepsSet, Manifest};
 use okapi::openapi3::OpenApi;
-use std::fs;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;
@@ -114,25 +112,25 @@ fn add_dependencies(dependencies: &mut DepsSet, local_dependencies: bool) -> Res
     // base64uuid
     dependencies.insert(
         "base64uuid".to_string(),
-        fp_dependency("base64uuid", local_dependencies),
+        fp_dependency("base64uuid", local_dependencies, vec![]),
     );
 
-    // fiberplane
+    // fiberplane-models
     dependencies.insert(
-        "fiberplane".to_string(),
-        fp_dependency("fiberplane", local_dependencies),
+        "fiberplane-models".to_string(),
+        fp_dependency("fiberplane-models", local_dependencies, vec![]),
     );
 
-    // fp-templates
+    // fiberplane-templates
     dependencies.insert(
-        "fp-templates".to_string(),
-        fp_dependency("fp-templates", local_dependencies),
+        "fiberplane-templates".to_string(),
+        fp_dependency("fiberplane-templates", local_dependencies, vec!["types"]),
     );
 
     // time
     {
         let mut dependency = DependencyDetail::default();
-        dependency.version = Some("0".to_string());
+        dependency.version = Some("0.3".to_string());
         dependency.features.push("parsing".to_string());
         dependency.features.push("formatting".to_string());
         dependency.features.push("serde-human-readable".to_string());
@@ -147,8 +145,9 @@ fn add_dependencies(dependencies: &mut DepsSet, local_dependencies: bool) -> Res
 }
 
 /// declare a dependency which lives within the fiberplane-rs repository
-fn fp_dependency(name: &str, local_dependency: bool) -> Dependency {
+fn fp_dependency(name: &str, local_dependency: bool, features: Vec<&str>) -> Dependency {
     let mut dependency = DependencyDetail::default();
+    dependency.features = features.into_iter().map(str::to_string).collect();
 
     if local_dependency {
         dependency.path = Some(format!("../{name}"));

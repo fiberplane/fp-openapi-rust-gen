@@ -61,7 +61,7 @@ fn generate_config_method(writer: &mut BufWriter<File>) -> Result<()> {
 }
 
 fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Result<()> {
-    let mut description = server
+    let description = server
         .description
         .as_ref()
         .ok_or_else(|| anyhow!("Server {:?} does not have `description`", server))?;

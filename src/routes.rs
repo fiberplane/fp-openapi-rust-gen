@@ -3,8 +3,7 @@ use crate::types::{map_type, resolve, ResolveTarget, ResolvedReference};
 use anyhow::{anyhow, bail, Context, Result};
 use convert_case::{Case, Casing};
 use okapi::openapi3::{
-    Components, MediaType, Operation, Parameter, ParameterValue, PathItem, RefOr, RequestBody,
-    Response,
+    Components, MediaType, Operation, Parameter, ParameterValue, PathItem, RefOr,
 };
 use okapi::Map;
 use regex::Regex;
@@ -45,8 +44,28 @@ pub(crate) fn generate_routes(
     //write!(writer, "pub mod models;\n\n")?;
 
     write!(writer, "pub mod models {{\n")?;
-    write!(writer, "    pub use fiberplane::protocols::core::*;\n")?;
-    write!(writer, "    pub use fp_templates::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::notebooks::*;\n")?;
+    write!(
+        writer,
+        "    pub use fiberplane_models::notebooks::operations::*;\n"
+    )?;
+    write!(writer, "    pub use fiberplane_models::blobs::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::comments::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::data_sources::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::events::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::files::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::formatting::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::labels::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::names::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::proxies::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::query_data::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::realtime::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::sorting::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::timestamps::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::tokens::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::users::*;\n")?;
+    write!(writer, "    pub use fiberplane_models::workspaces::*;\n")?;
+    write!(writer, "    pub use fiberplane_templates::*;\n")?;
     write!(writer, "}}\n\n")?;
 
     for (endpoint, item) in paths {
