@@ -45,7 +45,7 @@ pub(crate) fn generate_routes(
     write!(writer, "pub mod clients;\n\n")?;
     //write!(writer, "pub mod models;\n\n")?;
 
-    write!(writer, "pub mod models {{\n")?;
+    write!(writer, "pub(crate) mod models {{\n")?;
     write!(writer, "    pub use fiberplane_models::notebooks::*;\n")?;
     write!(
         writer,
