@@ -336,8 +336,7 @@ fn generate_route(
                 } else {
                     // octet-stream should be `bytes::Bytes` so don't warn about it when we reach this fallback
                     if response.content.get("application/octet-stream").is_none() {
-                        let keys: Vec<_> = response.content.keys()
-                            .collect();
+                        let keys: Vec<_> = response.content.keys().collect();
                         eprintln!("warn: unknown response mime type(s), falling back to `bytes::Bytes`: {:?}", keys);
                     }
 
