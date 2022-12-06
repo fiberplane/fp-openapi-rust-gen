@@ -1,5 +1,7 @@
 use crate::types;
-use crate::types::{map_type, resolve, ResolveTarget, ResolvedReference};
+use crate::types::{
+    map_type, reference_name_to_models_path, resolve, ResolveTarget, ResolvedReference,
+};
 use anyhow::{anyhow, bail, Context, Result};
 use convert_case::{Case, Casing};
 use okapi::openapi3::{
@@ -7,7 +9,7 @@ use okapi::openapi3::{
 };
 use okapi::Map;
 use regex::Regex;
-use schemars::schema::{Schema, SingleOrVec};
+use schemars::schema::{InstanceType, Schema, SingleOrVec};
 use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
@@ -226,15 +228,29 @@ fn generate_route(
                 .ok_or_else(|| anyhow!("need a schema"))?;
 
             if let Some(reference) = &schema.reference {
-                write!(writer, "    payload: ")?;
+                let reference = reference_name_to_models_path(reference);
+                write!(writer, "    payload: {}\n", reference)?;
+            } else if let Some(array) = &schema.array {
+                let items = array
+                    .items
+                    .as_ref()
+                    .ok_or_else(|| anyhow!("array but no items?"))?;
 
-                if let Some((_, reference_name)) = reference.rsplit_once('/') {
-                    write!(writer, "models::{},", reference_name.to_case(Case::Pascal))?;
-                } else {
-                    write!(writer, "models::{},", reference.to_case(Case::Pascal))?;
+                match items {
+                    SingleOrVec::Single(schema) => match &**schema {
+                        Schema::Object(object) => {
+                            let type_ = map_type(
+                                object.format.as_deref(),
+                                object.instance_type.as_ref(),
+                                object.reference.as_deref(),
+                            )?;
+
+                            write!(writer, "    payload: {}\n", type_)?;
+                        }
+                        Schema::Bool(_) => bail!("simple boolean Vec is unsupported"),
+                    },
+                    SingleOrVec::Vec(_) => bail!("Vec with Array as items is not supported"),
                 }
-
-                write!(writer, "\n")?;
             } else {
                 // inline type
                 let type_ = map_type(
