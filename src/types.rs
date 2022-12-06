@@ -27,7 +27,7 @@ pub(crate) fn map_type<'a>(
                     InstanceType::Object => "std::collections::HashMap<String, String>".into(),
                     InstanceType::Array => {
                         if let Some(reference) = reference {
-                            reference_name_to_models_path(reference).into()
+                            format!("Vec<{}>", reference_name_to_models_path(reference)).into()
                         } else {
                             "Vec<serde_json::Value>".into()
                         }
