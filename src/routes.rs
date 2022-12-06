@@ -245,7 +245,7 @@ fn generate_route(
                                 object.reference.as_deref(),
                             )?;
 
-                            write!(writer, "    payload: {}\n", type_)?;
+                            write!(writer, "    payload: Vec<{}>\n", type_)?;
                         }
                         Schema::Bool(_) => bail!("simple boolean Vec is unsupported"),
                     },
@@ -334,7 +334,12 @@ fn generate_route(
                     is_text = true;
                     write!(writer, "String")?;
                 } else {
-                    eprintln!("unknown response mime type: {:?}", response.content);
+                    // octet-stream should be `bytes::Bytes` so don't warn about it when we reach this fallback
+                    if response.content.get("application/octet-stream").is_none() {
+                        let keys: Vec<_> = response.content.keys().collect();
+                        eprintln!("warn: unknown response mime type(s), falling back to `bytes::Bytes`: {:?}", keys);
+                    }
+
                     write!(writer, "bytes::Bytes")?;
                 }
             }

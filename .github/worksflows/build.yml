@@ -1,0 +1,55 @@
+# This workflow will be triggered by a GitHub pull-request.
+# It compiles the code to a release binary, create a Docker image containing
+# the binary, and uploads the Docker image to our registry using the branch as
+# the registry tag.
+---
+name: Build development image
+
+on:
+  pull_request:
+    branches: ["*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  DISABLE_VERSION_CHECK: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest-8-cores
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: setup-git-credentials
+        uses: fusion-engineering/setup-git-credentials@v2.0.6
+        with:
+          credentials: "https://fiberplanebot:${{ secrets.PRIVATE_GITHUB_TOKEN }}@github.com/"
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: add rust components
+        run: |
+          rustup component add clippy
+          rustup component add rustfmt
+
+      - name: Check format
+        run: cargo fmt -- --check
+
+      - name: Build binary and tests
+        run: cargo build --bins --tests --release
+
+      - name: Lint code
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features --release
+
+      - name: Run tests
+        run: cargo test --release
