@@ -25,22 +25,32 @@ pub(crate) fn map_type<'a>(
                     InstanceType::Null => "()".into(),
                     InstanceType::Boolean => "bool".into(),
                     InstanceType::Object => "std::collections::HashMap<String, String>".into(),
-                    InstanceType::Array => "Vec<serde_json::Value>".into(),
+                    InstanceType::Array => {
+                        if let Some(reference) = reference {
+                            reference_name_to_models_path(reference).into()
+                        } else {
+                            "Vec<serde_json::Value>".into()
+                        }
+                    }
                     InstanceType::Number => "i64".into(),
                     InstanceType::String => "String".into(),
                     InstanceType::Integer => "i32".into(),
                 }
             } else if let Some(reference) = reference {
-                if let Some((_, reference_name)) = reference.rsplit_once('/') {
-                    format!("models::{}", reference_name.to_case(Case::Pascal)).into()
-                } else {
-                    format!("models::{}", reference.to_case(Case::Pascal)).into()
-                }
+                reference_name_to_models_path(reference).into()
             } else {
                 bail!("Failed to write field. Unsupported instance_type and reference is None");
             }
         }
     })
+}
+
+pub(crate) fn reference_name_to_models_path(input: &str) -> String {
+    if let Some((_, reference_name)) = input.rsplit_once('/') {
+        format!("models::{}", reference_name.to_case(Case::Pascal))
+    } else {
+        format!("models::{}", input.to_case(Case::Pascal))
+    }
 }
 
 pub(crate) enum ResolveTarget<'a> {
