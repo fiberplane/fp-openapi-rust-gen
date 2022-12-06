@@ -42,9 +42,10 @@ fn generate_config_method(writer: &mut BufWriter<File>) -> Result<()> {
     write!(writer, "pub fn default_config(\n")?;
     write!(writer, "    timeout: Option<Duration>,\n")?;
     write!(writer, "    user_agent: Option<&str>,\n")?;
+    write!(writer, "    default_headers: Option<header::HeaderMap>,\n")?;
     write!(writer, ") -> Result<Client> {{\n")?;
 
-    write!(writer, "    let mut headers = header::HeaderMap::new();\n")?;
+    write!(writer, "    let mut headers = default_headers.unwrap_or_default();\n")?;
     write!(writer, "    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(user_agent.unwrap_or(\"Fiberplane Rust API client\"))?);\n\n")?;
 
     write!(writer, "    Ok(Client::builder()\n")?;
@@ -125,6 +126,7 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
 
     write!(writer, "    let config = default_config(\n")?;
     write!(writer, "        Some(Duration::from_secs(5)),\n")?;
+    write!(writer, "        None,\n")?;
     write!(writer, "        None,\n")?;
     write!(writer, "    )?;\n\n")?;
 
