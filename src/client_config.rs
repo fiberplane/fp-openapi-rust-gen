@@ -45,7 +45,10 @@ fn generate_config_method(writer: &mut BufWriter<File>) -> Result<()> {
     write!(writer, "    default_headers: Option<header::HeaderMap>,\n")?;
     write!(writer, ") -> Result<Client> {{\n")?;
 
-    write!(writer, "    let mut headers = default_headers.unwrap_or_default();\n")?;
+    write!(
+        writer,
+        "    let mut headers = default_headers.unwrap_or_default();\n"
+    )?;
     write!(writer, "    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(user_agent.unwrap_or(\"Fiberplane Rust API client\"))?);\n\n")?;
 
     write!(writer, "    Ok(Client::builder()\n")?;
