@@ -43,11 +43,11 @@ pub(crate) fn generate_models(components: &Components, src_path: &PathBuf) -> Re
 }
 
 fn generate_model(name: &str, object: &SchemaObject, writer: &mut BufWriter<File>) -> Result<()> {
-    writer.write(b"use serde::{Deserialize, Serialize};\n")?;
-    writer.write(b"use crate::models;\n")?;
-    writer.write(b"\n")?;
+    writer.write_all(b"use serde::{Deserialize, Serialize};\n")?;
+    writer.write_all(b"use crate::models;\n")?;
+    writer.write_all(b"\n")?;
 
-    writer.write(b"#[derive(Clone, Debug, Serialize, Deserialize)]\n")?;
+    writer.write_all(b"#[derive(Clone, Debug, Serialize, Deserialize)]\n")?;
     writer.write_fmt(format_args!(
         "pub struct {} {{\n",
         name.to_case(Case::Pascal)
@@ -66,7 +66,7 @@ fn generate_model(name: &str, object: &SchemaObject, writer: &mut BufWriter<File
         eprintln!("warn: {} had no object. probably a enum?", name);
     }
 
-    writer.write(b"}\n\n")?;
+    writer.write_all(b"}\n\n")?;
 
     Ok(())
 }
