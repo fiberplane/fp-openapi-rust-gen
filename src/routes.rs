@@ -9,7 +9,7 @@ use okapi::openapi3::{
 };
 use okapi::Map;
 use regex::Regex;
-use schemars::schema::{InstanceType, Schema, SingleOrVec};
+use schemars::schema::{Schema, SingleOrVec};
 use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
