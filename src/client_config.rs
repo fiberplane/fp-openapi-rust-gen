@@ -16,12 +16,13 @@ pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) ->
 
     let mut writer = BufWriter::new(file);
 
-    write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
-    write!(
+    writeln!(writer, "use anyhow::{{Context as _, Result}};")?;
+    writeln!(
         writer,
-        "use reqwest::{{Client, header, Method, RequestBuilder, Url}};\n"
+        "use reqwest::{{Client, header, Method, RequestBuilder, Url}};"
     )?;
-    write!(writer, "use std::time::Duration;\n\n")?;
+    writeln!(writer, "use crate::builder::ApiClientBuilder;")?;
+    writeln!(writer, "use std::time::Duration;\n")?;
 
     generate_config_method(&mut writer)?;
 
@@ -53,27 +54,27 @@ pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) ->
 }
 
 fn generate_config_method(writer: &mut BufWriter<File>) -> Result<()> {
-    write!(writer, "pub fn default_config(\n")?;
-    write!(writer, "    timeout: Option<Duration>,\n")?;
-    write!(writer, "    user_agent: Option<&str>,\n")?;
-    write!(writer, "    default_headers: Option<header::HeaderMap>,\n")?;
-    write!(writer, ") -> Result<Client> {{\n")?;
+    writeln!(writer, "pub fn default_config(")?;
+    writeln!(writer, "    timeout: Option<Duration>,")?;
+    writeln!(writer, "    user_agent: Option<&str>,")?;
+    writeln!(writer, "    default_headers: Option<header::HeaderMap>,")?;
+    writeln!(writer, ") -> Result<Client> {{")?;
 
-    write!(
+    writeln!(
         writer,
-        "    let mut headers = default_headers.unwrap_or_default();\n"
+        "    let mut headers = default_headers.unwrap_or_default();"
     )?;
-    write!(writer, "    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(user_agent.unwrap_or(\"Fiberplane Rust API client\"))?);\n\n")?;
+    writeln!(writer, "    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(user_agent.unwrap_or(\"Fiberplane Rust API client\"))?);\n")?;
 
-    write!(writer, "    Ok(Client::builder()\n")?;
-    write!(
+    writeln!(writer, "    Ok(Client::builder()")?;
+    writeln!(
         writer,
-        "        .connect_timeout(timeout.unwrap_or_else(|| Duration::from_secs(10)))\n"
+        "        .connect_timeout(timeout.unwrap_or_else(|| Duration::from_secs(10)))"
     )?;
-    write!(writer, "        .default_headers(headers)\n")?;
-    write!(writer, "        .build()?)\n")?;
+    writeln!(writer, "        .default_headers(headers)")?;
+    writeln!(writer, "        .build()?)")?;
 
-    write!(writer, "}}\n\n")?;
+    writeln!(writer, "}}\n")?;
 
     Ok(())
 }
@@ -97,11 +98,11 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
         write!(writer, "\n    {}: Option<&str>,", name.to_case(Case::Snake))?;
 
         if peekable.peek().is_none() {
-            write!(writer, "\n")?;
+            writeln!(writer, "")?;
         }
     }
 
-    write!(writer, ") -> Result<ApiClient> {{\n")?;
+    writeln!(writer, ") -> Result<ApiClient> {{")?;
 
     let variables: Vec<String> = server
         .variables
@@ -118,7 +119,7 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
     let variables = variables.join("\n    ");
 
     if !server.variables.is_empty() {
-        write!(writer, "    {}\n", variables)?;
+        writeln!(writer, "    {}", variables)?;
 
         let format_args: Vec<String> = server
             .variables
@@ -139,20 +140,20 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
         write!(writer, "    let url = \"{}\";", server.url)?;
     }
 
-    write!(writer, "\n\n")?;
+    writeln!(writer, "\n")?;
 
-    write!(writer, "    let config = default_config(\n")?;
-    write!(writer, "        Some(Duration::from_secs(5)),\n")?;
-    write!(writer, "        None,\n")?;
-    write!(writer, "        None,\n")?;
-    write!(writer, "    )?;\n\n")?;
+    writeln!(writer, "    let config = default_config(")?;
+    writeln!(writer, "        Some(Duration::from_secs(5)),")?;
+    writeln!(writer, "        None,")?;
+    writeln!(writer, "        None,")?;
+    writeln!(writer, "    )?;\n")?;
 
-    write!(writer, "    Ok(ApiClient {{\n")?;
-    write!(writer, "        client: config,\n")?;
-    write!(writer, "        server: Url::parse(url).context(\"Failed to parse base url from Open API document\")?,\n")?;
-    write!(writer, "    }})\n")?;
+    writeln!(writer, "    Ok(ApiClient {{")?;
+    writeln!(writer, "        client: config,")?;
+    writeln!(writer, "        server: Url::parse(url).context(\"Failed to parse base url from Open API document\")?,")?;
+    writeln!(writer, "    }})")?;
 
-    write!(writer, "}}\n\n")?;
+    writeln!(writer, "}}\n")?;
 
     Ok(())
 }
@@ -286,14 +287,20 @@ fn generate_builder(writer: &mut BufWriter<File>) -> Result<()> {
     writeln!(writer, "            )?,")?;
     writeln!(writer, "        );\n")?;
 
-    writeln!(writer, "        if let Some(bearer) = self.bearer_token {{")?;
+    writeln!(
+        writer,
+        "        if let Some(bearer) = &self.bearer_token {{"
+    )?;
     writeln!(writer, "          headers.insert(")?;
     writeln!(writer, "              header::AUTHORIZATION,")?;
     writeln!(writer, "              header::HeaderValue::from_str(")?;
-    writeln!(writer, "                  format!(\"Bearer {{}}\", bearer)")?;
+    writeln!(
+        writer,
+        "                  &format!(\"Bearer {{}}\", bearer)"
+    )?;
     writeln!(writer, "              )?,")?;
-    writeln!(writer, "          );\n")?;
-    writeln!(writer, "        }}")?;
+    writeln!(writer, "          );")?;
+    writeln!(writer, "        }}\n")?;
 
     writeln!(writer, "        let client = reqwest::Client::builder()")?;
     writeln!(
