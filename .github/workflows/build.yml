@@ -73,6 +73,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push to Docker Hub
         uses: docker/build-push-action@v3
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: true
         with:
           context: .
           platforms: linux/amd64,linux/arm64
