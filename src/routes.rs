@@ -42,7 +42,8 @@ pub(crate) fn generate_routes(
     write!(writer, "use crate::clients::ApiClient;\n")?;
     write!(writer, "use reqwest::Method;\n\n")?;
 
-    write!(writer, "pub mod clients;\n\n")?;
+    writeln!(writer, "pub mod builder;")?;
+    writeln!(writer, "pub mod clients;\n")?;
     //write!(writer, "pub mod models;\n\n")?;
 
     write!(writer, "pub(crate) mod models {{\n")?;
@@ -404,7 +405,7 @@ fn generate_function_body(
         write!(writer, "        \"{}\"", endpoint)?;
     }
 
-    write!(writer, "\n    );\n")?;
+    write!(writer, "\n    )?;\n")?;
 
     // Query strings as parameters
     for ref_or in &operation.parameters {
