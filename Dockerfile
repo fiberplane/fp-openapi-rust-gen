@@ -3,9 +3,8 @@ ARG ARCH
 ARG TARGET
 
 # builder
-FROM ${ARCH}rust AS builder
+FROM ${ARCH}rust:slim-buster AS builder
 
-WORKDIR /usr/src/fp-openapi-rust-gen
 COPY . .
 RUN cargo build --release
 
@@ -18,6 +17,6 @@ RUN apt-get update \
  && apt-get autoremove \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/src/fp-openapi-rust-gen/target/${TARGET}/release/fp-openapi-rust-gen /app/
+COPY --from=builder target/${TARGET}/release/fp-openapi-rust-gen /app/
 
 ENTRYPOINT ["/app/fp-openapi-rust-gen"]
