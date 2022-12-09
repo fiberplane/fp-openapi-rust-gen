@@ -405,7 +405,7 @@ fn generate_function_body(
         write!(writer, "        \"{}\"", endpoint)?;
     }
 
-    write!(writer, "\n    );\n")?;
+    write!(writer, "\n    )?;\n")?;
 
     // Query strings as parameters
     for ref_or in &operation.parameters {

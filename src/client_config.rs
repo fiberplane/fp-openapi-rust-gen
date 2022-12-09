@@ -169,14 +169,11 @@ fn generate_client_type(writer: &mut BufWriter<File>) -> Result<()> {
 
     writeln!(
         writer,
-        "    pub fn request(&self, method: Method, endpoint: &str) -> RequestBuilder {{"
+        "    pub fn request(&self, method: Method, endpoint: &str) -> Result<RequestBuilder> {{"
     )?;
-    writeln!(
-        writer,
-        "        let url = format!(\"{{}}{{}}\", &self.server, endpoint);\n"
-    )?;
+    writeln!(writer, "        let url = self.server.join(endpoint)?;\n")?;
 
-    writeln!(writer, "        self.client.request(method, url)")?;
+    writeln!(writer, "        Ok(self.client.request(method, url))")?;
     writeln!(writer, "    }}\n")?;
 
     writeln!(
