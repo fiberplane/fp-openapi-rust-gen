@@ -421,31 +421,7 @@ fn generate_function_body(
                 match parameter.location.as_str() {
                     "path" => continue,
                     "query" => {
-                        let parameter_name = match &parameter.value {
-                            ParameterValue::Schema { schema, .. } => {
-                                let type_ = map_type(
-                                    schema.format.as_deref(),
-                                    schema.instance_type.as_ref(),
-                                    schema.reference.as_deref(),
-                                )
-                                .with_context(|| {
-                                    format!(
-                                        "Failed to map type for parameter {}. Schema: {:?}",
-                                        &parameter.name, schema
-                                    )
-                                })?;
-
-                                let parameter_name = parameter.name.to_case(Case::Snake);
-
-                                // special handling for `time::OffsetDateTime`
-                                if type_ == "time::OffsetDateTime" {
-                                    format!("{}.format(&Rfc3339)?", parameter_name)
-                                } else {
-                                    parameter_name
-                                }
-                            }
-                            ParameterValue::Content { .. } => parameter.name.to_case(Case::Snake),
-                        };
+                        let mut parameter_name = parameter.name.to_case(Case::Snake);
 
                         if !parameter.required {
                             write!(
@@ -453,6 +429,28 @@ fn generate_function_body(
                                 "    if let Some({}) = {} {{\n",
                                 parameter_name, parameter_name
                             )?;
+                        }
+
+                        if let ParameterValue::Schema { schema, .. } = &parameter.value {
+                            let type_ = map_type(
+                                schema.format.as_deref(),
+                                schema.instance_type.as_ref(),
+                                schema.reference.as_deref(),
+                            )
+                            .with_context(|| {
+                                format!(
+                                    "Failed to map type for parameter {}. Schema: {:?}",
+                                    &parameter.name, schema
+                                )
+                            })?;
+
+                            // special handling for `time::OffsetDateTime`
+                            if type_ == "time::OffsetDateTime" {
+                                parameter_name = format!("{}.format(&Rfc3339)?", parameter_name)
+                            } else if type_ == "std::collections::HashMap<String, String>" {
+                                parameter_name =
+                                    format!("serde_json::to_string(&{})?", parameter_name)
+                            }
                         }
 
                         write!(
