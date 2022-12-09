@@ -9,7 +9,7 @@ use okapi::openapi3::{
 };
 use okapi::Map;
 use regex::Regex;
-use schemars::schema::{InstanceType, Schema, SingleOrVec};
+use schemars::schema::{Schema, SingleOrVec};
 use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
@@ -33,43 +33,47 @@ pub(crate) fn generate_routes(
 
     let mut writer = BufWriter::new(file);
 
-    write!(writer, "#![forbid(unsafe_code)]\n")?;
-    write!(writer, "#![allow(unused_mut)]\n")?;
-    write!(writer, "#![allow(unused_variables)]\n")?;
-    write!(writer, "#![allow(unused_imports)]\n\n")?;
+    writeln!(writer, "#![forbid(unsafe_code)]")?;
+    writeln!(writer, "#![allow(unused_mut)]")?;
+    writeln!(writer, "#![allow(unused_variables)]")?;
+    writeln!(writer, "#![allow(unused_imports)]\n")?;
 
-    write!(writer, "use anyhow::{{Context as _, Result}};\n")?;
-    write!(writer, "use crate::clients::ApiClient;\n")?;
-    write!(writer, "use reqwest::Method;\n\n")?;
+    writeln!(writer, "use anyhow::{{Context as _, Result}};")?;
+    writeln!(writer, "use crate::clients::ApiClient;")?;
+    writeln!(writer, "use reqwest::Method;")?;
+    writeln!(
+        writer,
+        "use time::format_description::well_known::Rfc3339;\n"
+    )?;
 
     writeln!(writer, "pub mod builder;")?;
     writeln!(writer, "pub mod clients;\n")?;
     //write!(writer, "pub mod models;\n\n")?;
 
-    write!(writer, "pub(crate) mod models {{\n")?;
-    write!(writer, "    pub use fiberplane_models::notebooks::*;\n")?;
-    write!(
+    writeln!(writer, "pub(crate) mod models {{")?;
+    writeln!(writer, "    pub use fiberplane_models::notebooks::*;")?;
+    writeln!(
         writer,
-        "    pub use fiberplane_models::notebooks::operations::*;\n"
+        "    pub use fiberplane_models::notebooks::operations::*;"
     )?;
-    write!(writer, "    pub use fiberplane_models::blobs::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::comments::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::data_sources::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::events::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::files::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::formatting::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::labels::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::names::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::proxies::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::query_data::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::realtime::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::sorting::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::timestamps::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::tokens::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::users::*;\n")?;
-    write!(writer, "    pub use fiberplane_models::workspaces::*;\n")?;
-    write!(writer, "    pub use fiberplane_templates::*;\n")?;
-    write!(writer, "}}\n\n")?;
+    writeln!(writer, "    pub use fiberplane_models::blobs::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::comments::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::data_sources::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::events::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::files::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::formatting::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::labels::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::names::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::proxies::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::query_data::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::realtime::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::sorting::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::timestamps::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::tokens::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::users::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::workspaces::*;")?;
+    writeln!(writer, "    pub use fiberplane_templates::*;")?;
+    writeln!(writer, "}}\n")?;
 
     for (endpoint, item) in paths {
         // this is so ugly omg 😭
@@ -417,7 +421,7 @@ fn generate_function_body(
                 match parameter.location.as_str() {
                     "path" => continue,
                     "query" => {
-                        let parameter_name = parameter.name.to_case(Case::Snake);
+                        let mut parameter_name = parameter.name.to_case(Case::Snake);
 
                         if !parameter.required {
                             write!(
@@ -425,6 +429,28 @@ fn generate_function_body(
                                 "    if let Some({}) = {} {{\n",
                                 parameter_name, parameter_name
                             )?;
+                        }
+
+                        if let ParameterValue::Schema { schema, .. } = &parameter.value {
+                            let type_ = map_type(
+                                schema.format.as_deref(),
+                                schema.instance_type.as_ref(),
+                                schema.reference.as_deref(),
+                            )
+                            .with_context(|| {
+                                format!(
+                                    "Failed to map type for parameter {}. Schema: {:?}",
+                                    &parameter.name, schema
+                                )
+                            })?;
+
+                            // special handling for `time::OffsetDateTime`
+                            if type_ == "time::OffsetDateTime" {
+                                parameter_name = format!("{}.format(&Rfc3339)?", parameter_name)
+                            } else if type_ == "std::collections::HashMap<String, String>" {
+                                parameter_name =
+                                    format!("serde_json::to_string(&{})?", parameter_name)
+                            }
                         }
 
                         write!(
@@ -465,25 +491,26 @@ fn generate_function_body(
         }
     }
 
-    write!(writer, "    let response = builder.send()\n")?;
-    write!(writer, "        .await?")?;
+    writeln!(writer, "    let response = builder.send()")?;
+    writeln!(writer, "        .await?")?;
+    write!(writer, "        .error_for_status()?")?;
 
     // Response
     if is_json {
-        write!(writer, "\n        .json()\n")?;
-        write!(writer, "        .await?;\n\n")?;
+        writeln!(writer, "\n        .json()")?;
+        writeln!(writer, "        .await?;\n")?;
 
         write!(writer, "    Ok(response)")?;
     } else if is_text {
-        write!(writer, "\n        .text()\n")?;
-        write!(writer, "        .await?;\n\n")?;
+        writeln!(writer, "\n        .text()")?;
+        writeln!(writer, "        .await?;\n")?;
 
         write!(writer, "    Ok(response)")?;
     } else if is_none {
         write!(writer, ";\n\n    Ok(())")?;
     } else {
-        write!(writer, "\n        .bytes()\n")?;
-        write!(writer, "        .await?;\n\n")?;
+        writeln!(writer, "\n        .bytes()")?;
+        writeln!(writer, "        .await?;\n")?;
 
         write!(writer, "    Ok(response)")?;
     }
