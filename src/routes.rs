@@ -465,25 +465,26 @@ fn generate_function_body(
         }
     }
 
-    write!(writer, "    let response = builder.send()\n")?;
-    write!(writer, "        .await?")?;
+    writeln!(writer, "    let response = builder.send()")?;
+    writeln!(writer, "        .await?")?;
+    write!(writer, "        .error_for_status()?")?;
 
     // Response
     if is_json {
-        write!(writer, "\n        .json()\n")?;
-        write!(writer, "        .await?;\n\n")?;
+        writeln!(writer, "\n        .json()")?;
+        writeln!(writer, "        .await?;\n")?;
 
         write!(writer, "    Ok(response)")?;
     } else if is_text {
-        write!(writer, "\n        .text()\n")?;
-        write!(writer, "        .await?;\n\n")?;
+        writeln!(writer, "\n        .text()")?;
+        writeln!(writer, "        .await?;\n")?;
 
         write!(writer, "    Ok(response)")?;
     } else if is_none {
         write!(writer, ";\n\n    Ok(())")?;
     } else {
-        write!(writer, "\n        .bytes()\n")?;
-        write!(writer, "        .await?;\n\n")?;
+        writeln!(writer, "\n        .bytes()")?;
+        writeln!(writer, "        .await?;\n")?;
 
         write!(writer, "    Ok(response)")?;
     }
