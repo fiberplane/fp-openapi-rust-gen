@@ -8,28 +8,23 @@ name: Build
 on:
   pull_request:
     branches: ["*"]
-  push:
-    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
-  SERVICE: fp-openapi-rust-gen
+  DISABLE_VERSION_CHECK: true
+
 jobs:
-  # Lint the code and run the tests on Linux
-  test:
-    name: Test and lint
-    runs-on: ubuntu-latest-8-cores
+  build:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@v2
 
       - name: setup-git-credentials
-        uses: fusion-engineering/setup-git-credentials@v2
+        uses: fusion-engineering/setup-git-credentials@v2.0.6
         with:
           credentials: "https://fiberplanebot:${{ secrets.PRIVATE_GITHUB_TOKEN }}@github.com/"
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v2
         with:
           path: |
             ~/.cargo/bin/
@@ -37,184 +32,51 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: debug_x86_64-unknown-linux-gnu-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: add rust components
         run: |
           rustup component add clippy
           rustup component add rustfmt
-
       - name: Check format
         run: cargo fmt -- --check
+
+      - name: Build binary and tests
+        run: cargo build --bins --tests --release
 
       - name: Lint code
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          args: --all-features --release
 
       - name: Run tests
-        run: cargo test
-
-  build:
-    name: Create binary for ${{ matrix.target }}
-    needs: test
-    runs-on: ${{ matrix.os }}
-    env:
-      CARGO: cargo
-      TARGET_FLAGS: ""
-      TARGET_DIR: ./target
-      RUST_BACKTRACE: 1
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: setup-git-credentials
-        uses: fusion-engineering/setup-git-credentials@v2
-        with:
-          credentials: "https://fiberplanebot:${{ secrets.PRIVATE_GITHUB_TOKEN }}@github.com/"
-
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: cargo fetch
-        run: cargo fetch --target ${{ matrix.target }}
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          target: ${{ matrix.target }}
-
-      - name: Use Cross
-        run: |
-          cargo install cross --force
-          echo "CARGO=cross" >> $GITHUB_ENV
-          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
-
-      - name: Build release binary
-        run: ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
-
-      - name: Strip release binary (linux and macos, x86)
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: strip "${TARGET_DIR}/release/${SERVICE}"
-
-      - name: Prepare artifact
-        run: |
-          mkdir -p /tmp/artifact/
-          cp "${TARGET_DIR}/release/${SERVICE}" /tmp/artifact/
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ matrix.target }}
-          path: /tmp/artifact/
-          if-no-files-found: error
-          retention-days: 1
-
-  publish-artifacts-docker:
-    name: Build Docker image for ${{ matrix.docker_arch }}
-    runs-on: ubuntu-22.04
-    needs: build
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            docker_arch: amd64
-            docker_platform: linux/amd64
-          - target: aarch64-unknown-linux-gnu
-            docker_arch: arm64v8
-            docker_platform: linux/arm64
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Enable arm64 support in Docker
-        if: matrix.docker_arch == 'arm64v8'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-      - name: Export variables
-        run: |
-          short_sha=$(git rev-parse --short "${{ github.event.pull_request.head.sha || github.sha }}")
-          echo "IMAGE=fiberplane/fp-openapi-rust-gen" >> $GITHUB_ENV
-          echo "TAG=dev-${short_sha}-${{ matrix.docker_arch }}" >> $GITHUB_ENV
-
-      - uses: actions/download-artifact@v2
-        with:
-          name: ${{ matrix.target }}
-          path: artifact
-
-      - name: Prepare artifact
-        run: chmod u+x ./artifact/${SERVICE}
-
-      - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
-        with:
-          username: fiberplane
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build Docker image
-        run: >
-          docker build
-          -t ${IMAGE}:${TAG}
-          --platform "${{ matrix.docker_platform }}"
-          --build-arg ARCH=${{ matrix.docker_arch }}/
-          --build-arg BIN_PATH=artifact/${SERVICE}
-          --build-arg PROVIDERS_PATH=providers
-          .
-
-      - name: Test Docker image
-        run: docker run --rm "${IMAGE}:${TAG}" --help
-
-      - name: Push Docker image
-        run: docker push "${IMAGE}:${TAG}"
-
-  # Create a new manifest that contains references to the other two Docker
-  # images to create a cross platform Docker image.
-  publish-artifacts-docker-manifest:
-    name: Build Docker manifest
-    runs-on: ubuntu-22.04
-    needs: publish-artifacts-docker
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Export variables
-        run: |
-          short_sha=$(git rev-parse --short "${{ github.event.pull_request.head.sha || github.sha }}")
-          echo "SHORT_SHA=${short_sha}" >> $GITHUB_ENV
-          echo "IMAGE=fiberplane/fp-openapi-rust-gen" >> $GITHUB_ENV
-          echo "TAG=latest" >> $GITHUB_ENV
-
-      - name: Create Docker manifest
-        run: >
-          docker manifest create ${IMAGE}:${TAG}
-          --amend ${IMAGE}:dev-${SHORT_SHA}-amd64
-          --amend ${IMAGE}:dev-${SHORT_SHA}-arm64v8
-
-      - name: Push Docker manifest
-        if: github.event_name != 'pull_request'
-        run: docker manifest push ${IMAGE}:${TAG}
+        run: cargo test --release
+  # currently disabled because of a bug in docker buildx with arm: https://github.com/docker/build-push-action/issues/621
+  #publish-artifacts-docker:
+  #  name: Build and publish multi-arch Docker image
+  #  runs-on: ubuntu-latest-8-cores
+  #  needs: build
+  #  steps:
+  #    - uses: actions/checkout@v3
+  #      with:
+  #        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+  #    - name: Set up QEMU
+  #      uses: docker/setup-qemu-action@v2
+  #    - name: Set up Docker Buildx
+  #      uses: docker/setup-buildx-action@v2
+  #    - name: Login to Docker Hub
+  #      if: github.event_name != 'pull_request'
+  #      uses: docker/login-action@v2
+  #      with:
+  #        username: fiberplane
+  #        password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #    - name: Build and push to Docker Hub
+  #      uses: docker/build-push-action@v3
+  #      env:
+  #        CARGO_NET_GIT_FETCH_WITH_CLI: true
+  #      with:
+  #        context: .
+  #        platforms: linux/amd64,linux/arm64
+  #        push: ${{ github.event_name != 'pull_request' }}
+  #        tags: fiberplane/fp-openapi-rust-gen:latest
