@@ -6,14 +6,12 @@ use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
 pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) -> Result<()> {
-    let path = src_path.join("clients.rs");
-
     // https://stackoverflow.com/a/50691004/11494565
     let file = OpenOptions::new()
         .write(true)
         .create(true)
         .append(false)
-        .open(path)
+        .open(src_path.join("clients.rs"))
         .context("Failed to open or create clients.rs file")?;
 
     let mut writer = BufWriter::new(file);
@@ -35,7 +33,23 @@ pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) ->
 
     writer
         .flush()
-        .context("Failed to flush output for `clients.rs`")
+        .context("Failed to flush output for `clients.rs`")?;
+
+    // https://stackoverflow.com/a/50691004/11494565
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(false)
+        .open(src_path.join("builder.rs"))
+        .context("Failed to open or create builder.rs file")?;
+
+    let mut writer = BufWriter::new(file);
+
+    generate_builder(&mut writer)?;
+
+    writer
+        .flush()
+        .context("Failed to flush output for `builder.rs`")
 }
 
 fn generate_config_method(writer: &mut BufWriter<File>) -> Result<()> {
@@ -45,7 +59,10 @@ fn generate_config_method(writer: &mut BufWriter<File>) -> Result<()> {
     write!(writer, "    default_headers: Option<header::HeaderMap>,\n")?;
     write!(writer, ") -> Result<Client> {{\n")?;
 
-    write!(writer, "    let mut headers = default_headers.unwrap_or_default();\n")?;
+    write!(
+        writer,
+        "    let mut headers = default_headers.unwrap_or_default();\n"
+    )?;
     write!(writer, "    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(user_agent.unwrap_or(\"Fiberplane Rust API client\"))?);\n\n")?;
 
     write!(writer, "    Ok(Client::builder()\n")?;
@@ -141,27 +158,161 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
 }
 
 fn generate_client_type(writer: &mut BufWriter<File>) -> Result<()> {
-    write!(writer, "#[derive(Debug)]\n")?;
-    write!(writer, "pub struct ApiClient {{\n")?;
-    write!(writer, "    pub client: Client,\n")?;
-    write!(writer, "    pub server: Url,\n")?;
-    write!(writer, "}}\n\n")?;
+    writeln!(writer, "#[derive(Debug)]")?;
+    writeln!(writer, "pub struct ApiClient {{")?;
+    writeln!(writer, "    pub client: Client,")?;
+    writeln!(writer, "    pub server: Url,")?;
+    writeln!(writer, "}}\n")?;
 
-    write!(writer, "impl ApiClient {{\n")?;
+    writeln!(writer, "impl ApiClient {{")?;
 
-    write!(
+    writeln!(
         writer,
-        "    pub fn request(&self, method: Method, endpoint: &str) -> RequestBuilder {{\n"
+        "    pub fn request(&self, method: Method, endpoint: &str) -> RequestBuilder {{"
     )?;
-    write!(
+    writeln!(
         writer,
-        "        let url = format!(\"{{}}{{}}\", &self.server, endpoint);\n\n"
+        "        let url = format!(\"{{}}{{}}\", &self.server, endpoint);\n"
     )?;
 
-    write!(writer, "        self.client.request(method, url)\n")?;
-    write!(writer, "    }}\n")?;
+    writeln!(writer, "        self.client.request(method, url)")?;
+    writeln!(writer, "    }}\n")?;
 
-    write!(writer, "}}\n")?;
+    writeln!(
+        writer,
+        "    pub fn builder(base_url: Url) -> ApiClientBuilder {{"
+    )?;
+    writeln!(writer, "        ApiClientBuilder::new(base_url)")?;
+    writeln!(writer, "    }}")?;
+
+    writeln!(writer, "}}")?;
+
+    Ok(())
+}
+
+fn generate_builder(writer: &mut BufWriter<File>) -> Result<()> {
+    writeln!(writer, "use crate::clients::ApiClient;")?;
+    writeln!(writer, "use anyhow::Result;")?;
+    writeln!(writer, "use reqwest::{{header, Url}};")?;
+    writeln!(writer, "use std::time::Duration;\n")?;
+
+    writeln!(writer, "#[derive(Debug)]")?;
+    writeln!(writer, "pub struct ApiClientBuilder {{")?;
+    writeln!(writer, "    // Some client specific values")?;
+    writeln!(writer, "    base_url: Url,")?;
+    writeln!(writer, "    timeout: Option<Duration>,\n")?;
+
+    writeln!(
+        writer,
+        "    // These values will be mapped to header values"
+    )?;
+    writeln!(writer, "    user_agent: Option<String>,")?;
+    writeln!(writer, "    bearer_token: Option<String>,")?;
+    writeln!(writer, "}}\n")?;
+
+    writeln!(writer, "impl ApiClientBuilder {{")?;
+    writeln!(writer, "    pub fn new(base_url: Url) -> Self {{")?;
+    writeln!(writer, "        Self {{")?;
+    writeln!(writer, "            base_url,")?;
+    writeln!(writer, "            timeout: None,")?;
+    writeln!(writer, "            user_agent: None,")?;
+    writeln!(writer, "            bearer_token: None,")?;
+    writeln!(writer, "        }}")?;
+    writeln!(writer, "    }}\n")?;
+
+    writeln!(writer, "    /// Override the base_url for the ApiClient.")?;
+    writeln!(
+        writer,
+        "    pub fn base_url(mut self, base_url: Url) -> Self {{"
+    )?;
+    writeln!(writer, "        self.base_url = base_url;")?;
+    writeln!(writer, "        self")?;
+    writeln!(writer, "    }}\n")?;
+
+    writeln!(writer, "    /// Change the timeout for the ApiClient.")?;
+    writeln!(
+        writer,
+        "    pub fn timeout(mut self, timeout: Option<Duration>) -> Self {{"
+    )?;
+    writeln!(writer, "        self.timeout = timeout;")?;
+    writeln!(writer, "        self")?;
+    writeln!(writer, "    }}\n")?;
+
+    writeln!(writer, "    /// Override the user agent for the ApiClient.")?;
+    writeln!(
+        writer,
+        "    pub fn user_agent(mut self, user_agent: Option<impl Into<String>>) -> Self {{"
+    )?;
+    writeln!(
+        writer,
+        "        self.user_agent = user_agent.map(|agent| agent.into());"
+    )?;
+    writeln!(writer, "        self")?;
+    writeln!(writer, "    }}\n")?;
+
+    writeln!(
+        writer,
+        "    /// Set an authentication token for the ApiClient."
+    )?;
+    writeln!(
+        writer,
+        "    pub fn bearer_token(mut self, bearer_token: Option<impl Into<String>>) -> Self {{"
+    )?;
+    writeln!(
+        writer,
+        "        self.bearer_token = bearer_token.map(|token| token.into());"
+    )?;
+    writeln!(writer, "        self")?;
+    writeln!(writer, "    }}\n")?;
+
+    writeln!(
+        writer,
+        "    pub fn build_client(&self) -> Result<reqwest::Client> {{"
+    )?;
+    writeln!(
+        writer,
+        "        let mut headers = header::HeaderMap::new();\n"
+    )?;
+
+    writeln!(writer, "        headers.insert(")?;
+    writeln!(writer, "            header::USER_AGENT,")?;
+    writeln!(writer, "            header::HeaderValue::from_str(")?;
+    writeln!(writer, "                self.user_agent")?;
+    writeln!(writer, "                    .as_deref()")?;
+    writeln!(
+        writer,
+        "                    .unwrap_or(\"Fiberplane Rust API client\"),"
+    )?;
+    writeln!(writer, "            )?,")?;
+    writeln!(writer, "        );\n")?;
+
+    writeln!(writer, "        if let Some(bearer) = self.bearer_token {{")?;
+    writeln!(writer, "          headers.insert(")?;
+    writeln!(writer, "              header::AUTHORIZATION,")?;
+    writeln!(writer, "              header::HeaderValue::from_str(")?;
+    writeln!(writer, "                  format!(\"Bearer {{}}\", bearer)")?;
+    writeln!(writer, "              )?,")?;
+    writeln!(writer, "          );\n")?;
+    writeln!(writer, "        }}")?;
+
+    writeln!(writer, "        let client = reqwest::Client::builder()")?;
+    writeln!(
+        writer,
+        "            .connect_timeout(self.timeout.unwrap_or_else(|| Duration::from_secs(5)))"
+    )?;
+    writeln!(writer, "            .default_headers(headers)")?;
+    writeln!(writer, "            .build()?;\n")?;
+
+    writeln!(writer, "        Ok(client)")?;
+    writeln!(writer, "    }}\n")?;
+
+    writeln!(writer, "    /// Build the ApiClient.")?;
+    writeln!(writer, "    pub fn build(self) -> Result<ApiClient> {{")?;
+    writeln!(writer, "        let client = self.build_client()?;")?;
+    writeln!(writer, "        let server = self.base_url;")?;
+    writeln!(writer, "        Ok(ApiClient {{ client, server }})")?;
+    writeln!(writer, "    }}")?;
+    writeln!(writer, "}}")?;
 
     Ok(())
 }
