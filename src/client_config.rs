@@ -143,7 +143,7 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
     writeln!(writer, "\n")?;
 
     writeln!(writer, "    let config = default_config(")?;
-    writeln!(writer, "        Some(Duration::from_secs(5)),")?;
+    writeln!(writer, "        Some(Duration::from_secs(30)),")?;
     writeln!(writer, "        None,")?;
     writeln!(writer, "        None,")?;
     writeln!(writer, "    )?;\n")?;
