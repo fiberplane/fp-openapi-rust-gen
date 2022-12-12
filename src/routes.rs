@@ -67,6 +67,7 @@ pub(crate) fn generate_routes(
     writeln!(writer, "    pub use fiberplane_models::proxies::*;")?;
     writeln!(writer, "    pub use fiberplane_models::query_data::*;")?;
     writeln!(writer, "    pub use fiberplane_models::realtime::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::snippets::*;")?;
     writeln!(writer, "    pub use fiberplane_models::sorting::*;")?;
     writeln!(writer, "    pub use fiberplane_models::timestamps::*;")?;
     writeln!(writer, "    pub use fiberplane_models::tokens::*;")?;
