@@ -11,6 +11,7 @@ pub(crate) fn map_type<'a>(
 ) -> Result<Cow<'a, str>> {
     Ok(match format {
         Some("base64uuid") => "base64uuid::Base64Uuid".into(),
+        Some("name") => "fiberplane_models::names::Name".into(),
         Some("int32") => "i32".into(),
         Some("int64") => "i64".into(),
         Some("float") => "f32".into(),
