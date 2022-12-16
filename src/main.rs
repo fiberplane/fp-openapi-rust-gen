@@ -10,7 +10,6 @@ use std::path::{Path, PathBuf};
 
 mod client_config;
 mod generator;
-mod models;
 mod routes;
 mod types;
 

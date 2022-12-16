@@ -174,6 +174,7 @@ fn generate_route(
                             schema.format.as_deref(),
                             schema.instance_type.as_ref(),
                             schema.reference.as_deref(),
+                            true,
                         )
                         .with_context(|| {
                             format!(
@@ -249,6 +250,7 @@ fn generate_route(
                                 object.format.as_deref(),
                                 object.instance_type.as_ref(),
                                 object.reference.as_deref(),
+                                true,
                             )?;
 
                             write!(writer, "    payload: Vec<{}>\n", type_)?;
@@ -263,6 +265,7 @@ fn generate_route(
                     schema.format.as_deref(),
                     schema.instance_type.as_ref(),
                     schema.reference.as_deref(),
+                    true,
                 )?;
 
                 write!(writer, "    payload: {},\n", type_)?;
@@ -312,6 +315,7 @@ fn generate_route(
                                         schema.format.as_deref(),
                                         schema.instance_type.as_ref(),
                                         schema.reference.as_deref(),
+                                        false,
                                     )?;
                                     write!(writer, "Vec<{}>", type_)?;
                                 }
@@ -326,6 +330,7 @@ fn generate_route(
                             schema.format.as_deref(),
                             schema.instance_type.as_ref(),
                             schema.reference.as_deref(),
+                            false,
                         )?;
 
                         if type_ == "()" {
@@ -437,6 +442,7 @@ fn generate_function_body(
                                 schema.format.as_deref(),
                                 schema.instance_type.as_ref(),
                                 schema.reference.as_deref(),
+                                true,
                             )
                             .with_context(|| {
                                 format!(
