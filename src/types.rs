@@ -8,10 +8,17 @@ pub(crate) fn map_type<'a>(
     format: Option<&str>,
     instance_type: Option<&'a SingleOrVec<InstanceType>>,
     reference: Option<&'a str>,
+    as_ref: bool,
 ) -> Result<Cow<'a, str>> {
     Ok(match format {
         Some("base64uuid") => "base64uuid::Base64Uuid".into(),
-        Some("name") => "fiberplane_models::names::Name".into(),
+        Some("name") => {
+            if as_ref {
+                "&fiberplane_models::names::Name".into()
+            } else {
+                "fiberplane_models::names::Name".into()
+            }
+        }
         Some("int32") => "i32".into(),
         Some("int64") => "i64".into(),
         Some("float") => "f32".into(),
@@ -34,7 +41,13 @@ pub(crate) fn map_type<'a>(
                         }
                     }
                     InstanceType::Number => "i64".into(),
-                    InstanceType::String => "String".into(),
+                    InstanceType::String => {
+                        if as_ref {
+                            "&str".into()
+                        } else {
+                            "String".into()
+                        }
+                    }
                     InstanceType::Integer => "i32".into(),
                 }
             } else if let Some(reference) = reference {
