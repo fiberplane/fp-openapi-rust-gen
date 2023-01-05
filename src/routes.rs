@@ -69,12 +69,12 @@ pub(crate) fn generate_routes(
     writeln!(writer, "    pub use fiberplane_models::realtime::*;")?;
     writeln!(writer, "    pub use fiberplane_models::snippets::*;")?;
     writeln!(writer, "    pub use fiberplane_models::sorting::*;")?;
+    writeln!(writer, "    pub use fiberplane_models::templates::*;")?;
     writeln!(writer, "    pub use fiberplane_models::timestamps::*;")?;
     writeln!(writer, "    pub use fiberplane_models::tokens::*;")?;
     writeln!(writer, "    pub use fiberplane_models::users::*;")?;
     writeln!(writer, "    pub use fiberplane_models::views::*;")?;
     writeln!(writer, "    pub use fiberplane_models::workspaces::*;")?;
-    writeln!(writer, "    pub use fiberplane_templates::*;")?;
     writeln!(writer, "}}\n")?;
 
     for (endpoint, item) in paths {

@@ -121,12 +121,6 @@ fn add_dependencies(dependencies: &mut DepsSet, local_dependencies: bool) -> Res
         fp_dependency("fiberplane-models", local_dependencies, vec![]),
     );
 
-    // fiberplane-templates
-    dependencies.insert(
-        "fiberplane-templates".to_string(),
-        fp_dependency("fiberplane-templates", local_dependencies, vec!["types"]),
-    );
-
     // time
     {
         let mut dependency = DependencyDetail::default();
