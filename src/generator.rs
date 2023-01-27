@@ -2,7 +2,9 @@ use crate::args::Args;
 use crate::client_config::generate_client_configs;
 use crate::routes::generate_routes;
 use anyhow::{anyhow, bail, Context, Result};
-use cargo_toml::{Dependency, DependencyDetail, DepsSet, Manifest};
+use cargo_toml::{
+    Dependency, DependencyDetail, DepsSet, Inheritable, InheritedDependencyDetail, Manifest,
+};
 use okapi::openapi3::OpenApi;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -68,7 +70,11 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
         .package
         .as_mut()
         .context("`Cargo.toml` does not contain a [package] section")?;
-    package_metadata.version = args.crate_version.clone();
+    package_metadata.version = if args.workspace {
+        Inheritable::Inherited { workspace: true }
+    } else {
+        Inheritable::Set(args.crate_version.clone())
+    };
 
     add_dependencies(&mut manifest.dependencies, args)?;
 
@@ -109,7 +115,7 @@ fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
         dependency.features.push("multipart".to_string());
         dependency.features.push("gzip".to_string());
         dependency.features.push("rustls-tls".to_string());
-        dependency.default_features = Some(false);
+        dependency.default_features = false;
 
         dependencies.insert("reqwest".to_string(), Dependency::Detailed(dependency));
     }
@@ -139,25 +145,35 @@ fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
     }
 
     dependencies.insert("bytes".to_string(), Dependency::Simple("1".to_string()));
-
     Ok(())
 }
 
 /// declare a dependency which lives within the fiberplane-rs repository
 fn fp_dependency(name: &str, args: &Args, features: &[&str]) -> Dependency {
-    let mut dependency = DependencyDetail::default();
-    dependency.features = features
-        .into_iter()
-        .map(|feature| feature.to_string())
-        .collect();
+    if args.workspace {
+        let mut dependency = InheritedDependencyDetail::default();
+        dependency.workspace = true;
+        dependency.features = features
+            .into_iter()
+            .map(|feature| feature.to_string())
+            .collect();
 
-    if args.local {
-        dependency.version = Some(args.crate_version.clone());
-        dependency.path = Some(format!("../{name}"));
+        Dependency::Inherited(dependency)
     } else {
-        dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
-        dependency.branch = Some("main".to_string());
-    }
+        let mut dependency = DependencyDetail::default();
+        dependency.features = features
+            .into_iter()
+            .map(|feature| feature.to_string())
+            .collect();
 
-    Dependency::Detailed(dependency)
+        if args.local {
+            dependency.version = Some(args.crate_version.clone());
+            dependency.path = Some(format!("../{name}"));
+        } else {
+            dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
+            dependency.branch = Some("main".to_string());
+        }
+
+        Dependency::Detailed(dependency)
+    }
 }
