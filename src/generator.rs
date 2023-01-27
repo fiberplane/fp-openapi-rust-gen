@@ -1,3 +1,4 @@
+use crate::args::Args;
 use crate::client_config::generate_client_configs;
 use crate::routes::generate_routes;
 use anyhow::{anyhow, bail, Context, Result};
@@ -8,11 +9,7 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
-pub(crate) fn generate_crate(
-    document: OpenApi,
-    path: &Path,
-    local_dependencies: bool,
-) -> Result<()> {
+pub(crate) fn generate_crate(document: OpenApi, path: &Path, args: &Args) -> Result<()> {
     let status = Command::new("cargo")
         .arg("new")
         .arg("--quiet")
@@ -34,7 +31,7 @@ pub(crate) fn generate_crate(
         }
     }
 
-    edit_cargo_toml(path, local_dependencies)?;
+    edit_cargo_toml(path, args)?;
 
     let src_directory = path.join("src");
 
@@ -52,7 +49,7 @@ fn open_manifest(path: &Path) -> Result<Manifest> {
     Ok(Manifest::from_path(path).context("Failed to parse `Cargo.toml`")?)
 }
 
-fn edit_cargo_toml(path: &Path, local_dependencies: bool) -> Result<()> {
+fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
     let path = path.join("Cargo.toml");
 
     // https://stackoverflow.com/a/50691004/11494565
@@ -65,7 +62,15 @@ fn edit_cargo_toml(path: &Path, local_dependencies: bool) -> Result<()> {
         .context("Failed to open or create `Cargo.toml`")?;
 
     let mut manifest = open_manifest(&path)?;
-    add_dependencies(&mut manifest.dependencies, local_dependencies)?;
+
+    // Set the version to be the workspace version.
+    let mut package_metadata = manifest
+        .package
+        .as_mut()
+        .context("`Cargo.toml` does not contain a [package] section")?;
+    package_metadata.version = args.crate_version.clone();
+
+    add_dependencies(&mut manifest.dependencies, args)?;
 
     let serialized = toml::to_string(&manifest).context("Failed to serialize `Cargo.toml`")?;
     file.write_all(serialized.as_bytes())
@@ -74,7 +79,7 @@ fn edit_cargo_toml(path: &Path, local_dependencies: bool) -> Result<()> {
     Ok(())
 }
 
-fn add_dependencies(dependencies: &mut DepsSet, local_dependencies: bool) -> Result<()> {
+fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
     // serde
     {
         let mut dependency = DependencyDetail::default();
@@ -112,13 +117,13 @@ fn add_dependencies(dependencies: &mut DepsSet, local_dependencies: bool) -> Res
     // base64uuid
     dependencies.insert(
         "base64uuid".to_string(),
-        fp_dependency("base64uuid", local_dependencies, vec![]),
+        fp_dependency("base64uuid", args, &[]),
     );
 
     // fiberplane-models
     dependencies.insert(
         "fiberplane-models".to_string(),
-        fp_dependency("fiberplane-models", local_dependencies, vec![]),
+        fp_dependency("fiberplane-models", args, &[]),
     );
 
     // time
@@ -139,11 +144,15 @@ fn add_dependencies(dependencies: &mut DepsSet, local_dependencies: bool) -> Res
 }
 
 /// declare a dependency which lives within the fiberplane-rs repository
-fn fp_dependency(name: &str, local_dependency: bool, features: Vec<&str>) -> Dependency {
+fn fp_dependency(name: &str, args: &Args, features: &[&str]) -> Dependency {
     let mut dependency = DependencyDetail::default();
-    dependency.features = features.into_iter().map(str::to_string).collect();
+    dependency.features = features
+        .into_iter()
+        .map(|feature| feature.to_string())
+        .collect();
 
-    if local_dependency {
+    if args.local {
+        dependency.version = Some(args.crate_version.clone());
         dependency.path = Some(format!("../{name}"));
     } else {
         dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());

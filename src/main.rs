@@ -1,13 +1,15 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{bail, Context, Result};
+use args::Args;
 use clap::Parser;
 use okapi::openapi3::OpenApi;
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
+mod args;
 mod client_config;
 mod generator;
 mod routes;
@@ -50,22 +52,5 @@ fn main() -> Result<()> {
         }
     }
 
-    generator::generate_crate(document, output, args.local)
-}
-
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// Path to input openapi file
-    #[clap(parse(from_os_str), required = true)]
-    file: PathBuf,
-    /// Path to the crate that will be generated
-    #[clap(short, long, parse(from_os_str), required = true)]
-    output: PathBuf,
-    /// Whenever fiberplane-rs dependencies are located locally relative to the output crate
-    #[clap(short, long)]
-    local: bool,
-    /// Force overwriting of crate path if it exists
-    #[clap(short, long)]
-    force: bool,
+    generator::generate_crate(document, output, &args)
 }
