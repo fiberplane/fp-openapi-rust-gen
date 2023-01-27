@@ -70,11 +70,11 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
         .package
         .as_mut()
         .context("`Cargo.toml` does not contain a [package] section")?;
-    package_metadata.version = if args.workspace {
-        Inheritable::Inherited { workspace: true }
-    } else {
-        Inheritable::Set(args.crate_version.clone())
-    };
+    if args.workspace {
+        package_metadata.version = Inheritable::Inherited { workspace: true };
+    } else if let Some(version) = args.crate_version.as_ref() {
+        package_metadata.version = Inheritable::Set(version.clone());
+    }
 
     add_dependencies(&mut manifest.dependencies, args)?;
 

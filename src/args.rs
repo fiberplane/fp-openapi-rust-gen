@@ -8,7 +8,7 @@ pub struct Args {
     /// If `local` is `true`, the local dependencies will be referenced with the same version.
     /// Ignored if `workspace` is `true`.
     #[clap(short, long)]
-    pub crate_version: String,
+    pub crate_version: Option<String>,
     /// Path to input openapi file
     #[clap(parse(from_os_str), required = true)]
     pub file: PathBuf,
