@@ -167,8 +167,11 @@ fn fp_dependency(name: &str, args: &Args, features: &[&str]) -> Dependency {
             .collect();
 
         if args.local {
-            dependency.version = Some(args.crate_version.clone());
             dependency.path = Some(format!("../{name}"));
+
+            if let Some(version) = args.crate_version.as_ref() {
+                dependency.version = Some(version.clone());
+            }
         } else {
             dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
             dependency.branch = Some("main".to_string());
