@@ -15,6 +15,9 @@ pub struct Args {
     /// Force overwriting of crate path if it exists
     #[clap(short, long)]
     pub force: bool,
+    /// Optional license string to include in the generated Cargo file.
+    #[clap(long)]
+    pub license: Option<String>,
     /// Whenever fiberplane-rs dependencies are located locally relative to the output crate.
     /// Ignored if `workspace` is `true`.
     #[clap(short, long)]

@@ -76,6 +76,14 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
         package_metadata.version = Inheritable::Set(version.clone());
     }
 
+    if let Some(license) = args.license.as_ref() {
+        package_metadata.license = if args.workspace {
+            Some(Inheritable::Inherited { workspace: true })
+        } else {
+            Some(Inheritable::Set(license.clone()))
+        };
+    }
+
     add_dependencies(&mut manifest.dependencies, args)?;
 
     let serialized = toml::to_string(&manifest).context("Failed to serialize `Cargo.toml`")?;
