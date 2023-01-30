@@ -48,7 +48,7 @@ pub(crate) fn generate_crate(document: OpenApi, path: &Path, args: &Args) -> Res
 }
 
 fn open_manifest(path: &Path) -> Result<Manifest> {
-    Ok(Manifest::from_path(path).context("Failed to parse `Cargo.toml`")?)
+    Manifest::from_path(path).context("Failed to parse `Cargo.toml`")
 }
 
 fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
@@ -87,13 +87,14 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
 
 fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
     // serde
-    {
-        let mut dependency = DependencyDetail::default();
-        dependency.version = Some("1".to_string());
-        dependency.features.push("derive".to_string());
-
-        dependencies.insert("serde".to_string(), Dependency::Detailed(dependency));
-    }
+    dependencies.insert(
+        "serde".to_owned(),
+        Dependency::Detailed(DependencyDetail {
+            features: vec!["derive".to_owned()],
+            version: Some("1".to_owned()),
+            ..Default::default()
+        }),
+    );
 
     // serde_json
     dependencies.insert(
@@ -108,17 +109,20 @@ fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
     dependencies.insert("secrecy".to_string(), Dependency::Simple("0".to_string()));
 
     // reqwest
-    {
-        let mut dependency = DependencyDetail::default();
-        dependency.version = Some("0.11".to_string());
-        dependency.features.push("json".to_string());
-        dependency.features.push("multipart".to_string());
-        dependency.features.push("gzip".to_string());
-        dependency.features.push("rustls-tls".to_string());
-        dependency.default_features = false;
-
-        dependencies.insert("reqwest".to_string(), Dependency::Detailed(dependency));
-    }
+    dependencies.insert(
+        "reqwest".to_owned(),
+        Dependency::Detailed(DependencyDetail {
+            default_features: false,
+            features: vec![
+                "gzip".to_owned(),
+                "json".to_owned(),
+                "multipart".to_owned(),
+                "rustls-tls".to_owned(),
+            ],
+            version: Some("0.11".to_owned()),
+            ..Default::default()
+        }),
+    );
 
     // base64uuid
     dependencies.insert(
@@ -133,44 +137,46 @@ fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
     );
 
     // time
-    {
-        let mut dependency = DependencyDetail::default();
-        dependency.version = Some("0.3".to_string());
-        dependency.features.push("parsing".to_string());
-        dependency.features.push("formatting".to_string());
-        dependency.features.push("serde-human-readable".to_string());
-        dependency.features.push("serde-well-known".to_string());
-
-        dependencies.insert("time".to_string(), Dependency::Detailed(dependency));
-    }
+    dependencies.insert(
+        "time".to_owned(),
+        Dependency::Detailed(DependencyDetail {
+            features: vec![
+                "formatting".to_owned(),
+                "parsing".to_owned(),
+                "serde-human-readable".to_owned(),
+                "serde-well-known".to_owned(),
+            ],
+            version: Some("0.3".to_owned()),
+            ..Default::default()
+        }),
+    );
 
     dependencies.insert("bytes".to_string(), Dependency::Simple("1".to_string()));
+
     Ok(())
 }
 
 /// declare a dependency which lives within the fiberplane-rs repository
 fn fp_dependency(name: &str, args: &Args, features: Vec<String>) -> Dependency {
     if args.workspace {
-        let mut dependency = InheritedDependencyDetail::default();
-        dependency.workspace = true;
-        dependency.features = features;
-
-        Dependency::Inherited(dependency)
+        Dependency::Inherited(InheritedDependencyDetail {
+            features,
+            workspace: true,
+            ..Default::default()
+        })
+    } else if args.local {
+        Dependency::Detailed(DependencyDetail {
+            features,
+            path: Some(format!("../{name}")),
+            version: args.crate_version.as_ref().cloned(),
+            ..Default::default()
+        })
     } else {
-        let mut dependency = DependencyDetail::default();
-        dependency.features = features;
-
-        if args.local {
-            dependency.path = Some(format!("../{name}"));
-
-            if let Some(version) = args.crate_version.as_ref() {
-                dependency.version = Some(version.clone());
-            }
-        } else {
-            dependency.git = Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_string());
-            dependency.branch = Some("main".to_string());
-        }
-
-        Dependency::Detailed(dependency)
+        Dependency::Detailed(DependencyDetail {
+            features,
+            git: Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_owned()),
+            branch: Some("main".to_owned()),
+            ..Default::default()
+        })
     }
 }

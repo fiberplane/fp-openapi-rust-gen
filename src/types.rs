@@ -84,9 +84,9 @@ impl ResolveTarget<'_> {
     /// Returns inner type of this object, erasing the inner type of `RefOr`
     fn inner(&self) -> Option<RefOr<()>> {
         match self {
-            ResolveTarget::Parameter(inner) => (*inner).map(|input| Self::type_erase(input)),
-            ResolveTarget::Response(inner) => (*inner).map(|input| Self::type_erase(input)),
-            ResolveTarget::RequestBody(inner) => (*inner).map(|input| Self::type_erase(input)),
+            ResolveTarget::Parameter(inner) => (*inner).map(Self::type_erase),
+            ResolveTarget::Response(inner) => (*inner).map(Self::type_erase),
+            ResolveTarget::RequestBody(inner) => (*inner).map(Self::type_erase),
         }
     }
 
@@ -167,7 +167,7 @@ pub(crate) fn resolve_reference<'a>(
     components: &'a Components,
 ) -> Result<Option<ResolvedReference<'a>>> {
     // The first one is #, the second one is components
-    let mut split = reference.split("/").skip(2);
+    let mut split = reference.split('/').skip(2);
     let component = split
         .next()
         .ok_or_else(|| anyhow!("no component name found in \"{}\"", reference))?;

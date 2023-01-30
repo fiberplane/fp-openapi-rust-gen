@@ -14,11 +14,11 @@ use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::ops::Deref;
-use std::path::PathBuf;
+use std::path::Path;
 
 pub(crate) fn generate_routes(
     paths: &Map<String, PathItem>,
-    src_path: &PathBuf,
+    src_path: &Path,
     components: &Components,
 ) -> Result<()> {
     let path = src_path.join("lib.rs");
@@ -132,7 +132,7 @@ pub(crate) fn generate_routes(
 
         // options, head, trace not yet supported
 
-        write!(writer, "\n")?;
+        writeln!(writer)?;
     }
 
     writer.flush().context("Failed to flush api.rs")?;
@@ -144,12 +144,12 @@ fn generate_route(
     endpoint: &str,
     method: &str,
     operation: &Operation,
-    shared_parameters: &Vec<RefOr<Parameter>>,
+    shared_parameters: &[RefOr<Parameter>],
     writer: &mut BufWriter<File>,
     components: &Components,
 ) -> Result<()> {
     if let Some(description) = &operation.description {
-        write!(writer, "/// {}\n", description)?;
+        writeln!(writer, "/// {}", description)?;
     }
 
     let method_name = operation
@@ -157,8 +157,8 @@ fn generate_route(
         .as_ref()
         .ok_or_else(|| anyhow!("\"{} {}\" does not have operation_id", method, endpoint))?;
 
-    write!(writer, "pub async fn {}(\n", method_name)?;
-    write!(writer, "    client: &ApiClient,\n")?;
+    writeln!(writer, "pub async fn {}(", method_name)?;
+    writeln!(writer, "    client: &ApiClient,")?;
 
     for raw_param in shared_parameters.iter().chain(&operation.parameters) {
         match resolve(ResolveTarget::Parameter(&Some(raw_param)), components)? {
@@ -194,7 +194,7 @@ fn generate_route(
                     write!(writer, ">")?;
                 }
 
-                write!(writer, ",\n")?;
+                writeln!(writer, ",")?;
             }
             Some(resolved) => bail!(
                 "resolved to unexpected type {:?}, expected `Parameter`",
@@ -237,7 +237,7 @@ fn generate_route(
 
             if let Some(reference) = &schema.reference {
                 let reference = reference_name_to_models_path(reference);
-                write!(writer, "    payload: {}\n", reference)?;
+                writeln!(writer, "    payload: {}", reference)?;
             } else if let Some(array) = &schema.array {
                 let items = array
                     .items
@@ -254,7 +254,7 @@ fn generate_route(
                                 true,
                             )?;
 
-                            write!(writer, "    payload: Vec<{}>\n", type_)?;
+                            writeln!(writer, "    payload: Vec<{}>", type_)?;
                         }
                         Schema::Bool(_) => bail!("simple boolean Vec is unsupported"),
                     },
@@ -269,7 +269,7 @@ fn generate_route(
                     true,
                 )?;
 
-                write!(writer, "    payload: {},\n", type_)?;
+                writeln!(writer, "    payload: {},", type_)?;
             }
         }
         Some(resolved) => bail!(
@@ -294,66 +294,67 @@ fn generate_route(
             if response.content.is_empty() {
                 is_none = true;
                 write!(writer, "()")?;
-            } else {
-                if let Some(json_media) = response.content.get("application/json") {
-                    let schema = json_media
-                        .schema
-                        .as_ref()
-                        .ok_or_else(|| anyhow!("need a schema"))?;
+            } else if let Some(json_media) = response.content.get("application/json") {
+                let schema = json_media
+                    .schema
+                    .as_ref()
+                    .ok_or_else(|| anyhow!("need a schema"))?;
 
-                    if let Some(reference) = &schema.reference {
-                        if let Some((_, reference_name)) = reference.rsplit_once('/') {
-                            write!(writer, "models::{}", reference_name.to_case(Case::Pascal))?;
-                        } else {
-                            write!(writer, "models::{}", reference.to_case(Case::Pascal))?;
-                        }
-                    } else if let Some(array) = &schema.array {
-                        match &array.items {
-                            Some(SingleOrVec::Single(single)) => match single.deref() {
-                                Schema::Bool(_) => eprintln!("unsupported bool for array items"),
-                                Schema::Object(schema) => {
-                                    let type_ = map_type(
-                                        schema.format.as_deref(),
-                                        schema.instance_type.as_ref(),
-                                        schema.reference.as_deref(),
-                                        false,
-                                    )?;
-                                    write!(writer, "Vec<{}>", type_)?;
-                                }
-                            },
-                            Some(SingleOrVec::Vec(vec)) => {
-                                eprintln!("unsupported multiple items vec {:?}", vec)
-                            }
-                            None => eprintln!("type is array but has no items? {:?}", schema),
-                        }
+                if let Some(reference) = &schema.reference {
+                    if let Some((_, reference_name)) = reference.rsplit_once('/') {
+                        write!(writer, "models::{}", reference_name.to_case(Case::Pascal))?;
                     } else {
-                        let type_ = map_type(
-                            schema.format.as_deref(),
-                            schema.instance_type.as_ref(),
-                            schema.reference.as_deref(),
-                            false,
-                        )?;
-
-                        if type_ == "()" {
-                            is_none = true;
+                        write!(writer, "models::{}", reference.to_case(Case::Pascal))?;
+                    }
+                } else if let Some(array) = &schema.array {
+                    match &array.items {
+                        Some(SingleOrVec::Single(single)) => match single.deref() {
+                            Schema::Bool(_) => eprintln!("unsupported bool for array items"),
+                            Schema::Object(schema) => {
+                                let type_ = map_type(
+                                    schema.format.as_deref(),
+                                    schema.instance_type.as_ref(),
+                                    schema.reference.as_deref(),
+                                    false,
+                                )?;
+                                write!(writer, "Vec<{}>", type_)?;
+                            }
+                        },
+                        Some(SingleOrVec::Vec(vec)) => {
+                            eprintln!("unsupported multiple items vec {:?}", vec)
                         }
-
-                        write!(writer, "{}", type_)?;
+                        None => eprintln!("type is array but has no items? {:?}", schema),
                     }
-
-                    is_json = true;
-                } else if response.content.get("text/plain").is_some() {
-                    is_text = true;
-                    write!(writer, "String")?;
                 } else {
-                    // octet-stream should be `bytes::Bytes` so don't warn about it when we reach this fallback
-                    if response.content.get("application/octet-stream").is_none() {
-                        let keys: Vec<_> = response.content.keys().collect();
-                        eprintln!("warn: unknown response mime type(s), falling back to `bytes::Bytes`: {:?}", keys);
+                    let type_ = map_type(
+                        schema.format.as_deref(),
+                        schema.instance_type.as_ref(),
+                        schema.reference.as_deref(),
+                        false,
+                    )?;
+
+                    if type_ == "()" {
+                        is_none = true;
                     }
 
-                    write!(writer, "bytes::Bytes")?;
+                    write!(writer, "{}", type_)?;
                 }
+
+                is_json = true;
+            } else if response.content.get("text/plain").is_some() {
+                is_text = true;
+                write!(writer, "String")?;
+            } else {
+                // octet-stream should be `bytes::Bytes` so don't warn about it when we reach this fallback
+                if response.content.get("application/octet-stream").is_none() {
+                    let keys: Vec<_> = response.content.keys().collect();
+                    eprintln!(
+                        "warn: unknown response mime type(s), falling back to `bytes::Bytes`: {:?}",
+                        keys
+                    );
+                }
+
+                write!(writer, "bytes::Bytes")?;
             }
         }
         Some(resolved) => bail!(
@@ -368,17 +369,18 @@ fn generate_route(
 
     // RETURN TYPE
 
-    write!(writer, "> {{\n")?;
+    writeln!(writer, "> {{")?;
 
     generate_function_body(
         endpoint, method, operation, writer, components, is_json, is_none, is_text,
     )?;
 
-    write!(writer, "\n}}\n\n")?;
+    writeln!(writer, "\n}}\n")?;
 
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn generate_function_body(
     endpoint: &str,
     method: &str,
@@ -389,8 +391,8 @@ fn generate_function_body(
     is_none: bool,
     is_text: bool,
 ) -> Result<()> {
-    write!(writer, "    let mut builder = client.request(\n",)?;
-    write!(writer, "        Method::{},\n", method)?;
+    writeln!(writer, "    let mut builder = client.request(",)?;
+    writeln!(writer, "        Method::{method},")?;
 
     // https://stackoverflow.com/a/413077/11494565
     let regex = Regex::new(r#"\{(.*?)\}"#).context("Failed to build regex")?;
@@ -416,63 +418,60 @@ fn generate_function_body(
         write!(writer, "        \"{}\"", endpoint)?;
     }
 
-    write!(writer, "\n    )?;\n")?;
+    writeln!(writer, "\n    )?;")?;
 
     // Query strings as parameters
     for ref_or in &operation.parameters {
         let option = Some(ref_or);
         let option = resolve(ResolveTarget::Parameter(&option), components)?;
 
-        if let Some(resolved_reference) = option {
-            if let ResolvedReference::Parameter(parameter) = resolved_reference {
-                match parameter.location.as_str() {
-                    "path" => continue,
-                    "query" => {
-                        let mut parameter_name = parameter.name.to_case(Case::Snake);
+        if let Some(ResolvedReference::Parameter(parameter)) = option {
+            match parameter.location.as_str() {
+                "path" => continue,
+                "query" => {
+                    let mut parameter_name = parameter.name.to_case(Case::Snake);
 
-                        if !parameter.required {
-                            write!(
-                                writer,
-                                "    if let Some({}) = {} {{\n",
-                                parameter_name, parameter_name
-                            )?;
-                        }
-
-                        if let ParameterValue::Schema { schema, .. } = &parameter.value {
-                            let type_ = map_type(
-                                schema.format.as_deref(),
-                                schema.instance_type.as_ref(),
-                                schema.reference.as_deref(),
-                                true,
-                            )
-                            .with_context(|| {
-                                format!(
-                                    "Failed to map type for parameter {}. Schema: {:?}",
-                                    &parameter.name, schema
-                                )
-                            })?;
-
-                            // special handling for `time::OffsetDateTime`
-                            if type_ == "time::OffsetDateTime" {
-                                parameter_name = format!("{}.format(&Rfc3339)?", parameter_name)
-                            } else if type_ == "std::collections::HashMap<String, String>" {
-                                parameter_name =
-                                    format!("serde_json::to_string(&{})?", parameter_name)
-                            }
-                        }
-
-                        write!(
+                    if !parameter.required {
+                        writeln!(
                             writer,
-                            "        builder = builder.query(&[(\"{}\", {})]);\n",
-                            parameter.name, parameter_name
+                            "    if let Some({}) = {} {{",
+                            parameter_name, parameter_name
                         )?;
+                    }
 
-                        if !parameter.required {
-                            write!(writer, "    }}\n")?;
+                    if let ParameterValue::Schema { schema, .. } = &parameter.value {
+                        let type_ = map_type(
+                            schema.format.as_deref(),
+                            schema.instance_type.as_ref(),
+                            schema.reference.as_deref(),
+                            true,
+                        )
+                        .with_context(|| {
+                            format!(
+                                "Failed to map type for parameter {}. Schema: {:?}",
+                                &parameter.name, schema
+                            )
+                        })?;
+
+                        // special handling for `time::OffsetDateTime`
+                        if type_ == "time::OffsetDateTime" {
+                            parameter_name = format!("{}.format(&Rfc3339)?", parameter_name)
+                        } else if type_ == "std::collections::HashMap<String, String>" {
+                            parameter_name = format!("serde_json::to_string(&{})?", parameter_name)
                         }
                     }
-                    location => eprintln!("unknown `in`: {}", location),
+
+                    writeln!(
+                        writer,
+                        "        builder = builder.query(&[(\"{}\", {})]);",
+                        parameter.name, parameter_name
+                    )?;
+
+                    if !parameter.required {
+                        writeln!(writer, "    }}")?;
+                    }
                 }
+                location => eprintln!("unknown `in`: {}", location),
             }
         }
     }
@@ -482,11 +481,11 @@ fn generate_function_body(
         match resolve(ResolveTarget::RequestBody(&Some(request_body)), components)? {
             Some(ResolvedReference::RequestBody(body)) => {
                 if body.content.get("application/json").is_some() {
-                    write!(writer, "    builder = builder.json(&payload);\n")?;
+                    writeln!(writer, "    builder = builder.json(&payload);")?;
                 } else if body.content.get("multipart/form-data").is_some() {
-                    write!(writer, "    builder = builder.form(&payload);\n")?;
+                    writeln!(writer, "    builder = builder.form(&payload);")?;
                 } else if body.content.get("application/octet-stream").is_some() {
-                    write!(writer, "    builder = builder.body(payload);\n")?;
+                    writeln!(writer, "    builder = builder.body(payload);")?;
                 } else {
                     eprintln!("Unsupported type(s): {:?}", body.content);
                 }

@@ -3,9 +3,9 @@ use convert_case::{Case, Casing};
 use okapi::openapi3::Server;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
-use std::path::PathBuf;
+use std::path::Path;
 
-pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) -> Result<()> {
+pub(crate) fn generate_client_configs(servers: &[Server], src_path: &Path) -> Result<()> {
     // https://stackoverflow.com/a/50691004/11494565
     let file = OpenOptions::new()
         .write(true)
@@ -98,7 +98,7 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
         write!(writer, "\n    {}: Option<&str>,", name.to_case(Case::Snake))?;
 
         if peekable.peek().is_none() {
-            writeln!(writer, "")?;
+            writeln!(writer)?;
         }
     }
 
