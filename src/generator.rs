@@ -123,13 +123,13 @@ fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
     // base64uuid
     dependencies.insert(
         "base64uuid".to_string(),
-        fp_dependency("base64uuid", args, &[]),
+        fp_dependency("base64uuid", args, Vec::new()),
     );
 
     // fiberplane-models
     dependencies.insert(
         "fiberplane-models".to_string(),
-        fp_dependency("fiberplane-models", args, &[]),
+        fp_dependency("fiberplane-models", args, Vec::new()),
     );
 
     // time
@@ -149,22 +149,16 @@ fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
 }
 
 /// declare a dependency which lives within the fiberplane-rs repository
-fn fp_dependency(name: &str, args: &Args, features: &[&str]) -> Dependency {
+fn fp_dependency(name: &str, args: &Args, features: Vec<String>) -> Dependency {
     if args.workspace {
         let mut dependency = InheritedDependencyDetail::default();
         dependency.workspace = true;
-        dependency.features = features
-            .into_iter()
-            .map(|feature| feature.to_string())
-            .collect();
+        dependency.features = features;
 
         Dependency::Inherited(dependency)
     } else {
         let mut dependency = DependencyDetail::default();
-        dependency.features = features
-            .into_iter()
-            .map(|feature| feature.to_string())
-            .collect();
+        dependency.features = features;
 
         if args.local {
             dependency.path = Some(format!("../{name}"));
