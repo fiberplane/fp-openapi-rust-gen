@@ -3,9 +3,9 @@ use convert_case::{Case, Casing};
 use okapi::openapi3::Server;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
-use std::path::PathBuf;
+use std::path::Path;
 
-pub(crate) fn generate_client_configs(servers: &[Server], src_path: &PathBuf) -> Result<()> {
+pub(crate) fn generate_client_configs(servers: &[Server], src_path: &Path) -> Result<()> {
     // https://stackoverflow.com/a/50691004/11494565
     let file = OpenOptions::new()
         .write(true)
@@ -98,7 +98,7 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
         write!(writer, "\n    {}: Option<&str>,", name.to_case(Case::Snake))?;
 
         if peekable.peek().is_none() {
-            writeln!(writer, "")?;
+            writeln!(writer)?;
         }
     }
 
@@ -109,24 +109,22 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
         .iter()
         .map(|(name, server)| {
             let snake_name = name.to_case(Case::Snake);
-            format!(
-                "let {} = {}.unwrap_or(\"{}\");",
-                snake_name, snake_name, server.default
-            )
+            let default = &server.default;
+            format!("let {snake_name} = {snake_name}.unwrap_or(\"{default}\");")
         })
         .collect();
 
     let variables = variables.join("\n    ");
 
     if !server.variables.is_empty() {
-        writeln!(writer, "    {}", variables)?;
+        writeln!(writer, "    {variables}")?;
 
         let format_args: Vec<String> = server
             .variables
-            .iter()
-            .map(|(name, _)| {
+            .keys()
+            .map(|name| {
                 let snake_name = name.to_case(Case::Snake);
-                format!("{} = {}", snake_name, snake_name)
+                format!("{snake_name} = {snake_name}")
             })
             .collect();
 

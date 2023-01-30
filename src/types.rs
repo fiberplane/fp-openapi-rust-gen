@@ -68,7 +68,6 @@ pub(crate) fn reference_name_to_models_path(input: &str) -> String {
 }
 
 pub(crate) enum ResolveTarget<'a> {
-    Schema(&'a Option<&'a RefOr<SchemaObject>>),
     Parameter(&'a Option<&'a RefOr<Parameter>>),
     Response(&'a Option<&'a RefOr<Response>>),
     RequestBody(&'a Option<&'a RefOr<RequestBody>>),
@@ -85,32 +84,15 @@ impl ResolveTarget<'_> {
     /// Returns inner type of this object, erasing the inner type of `RefOr`
     fn inner(&self) -> Option<RefOr<()>> {
         match self {
-            ResolveTarget::Schema(inner) => (*inner).map(|input| Self::type_erase(input)),
-            ResolveTarget::Parameter(inner) => (*inner).map(|input| Self::type_erase(input)),
-            ResolveTarget::Response(inner) => (*inner).map(|input| Self::type_erase(input)),
-            ResolveTarget::RequestBody(inner) => (*inner).map(|input| Self::type_erase(input)),
-        }
-    }
-
-    /// Clones the inner SchemaObject. Panics if `self` is not `Some(Schema)`
-    fn unpack_schema(&self) -> SchemaObject {
-        match self {
-            ResolveTarget::Schema(schema) => {
-                match schema.expect("called `unpack_schema` on Schema(None)") {
-                    RefOr::Ref(_) => panic!("called `unpack_schema` on Schema(Ref(..))"),
-                    RefOr::Object(object) => object.clone(),
-                }
-            }
-            ResolveTarget::Parameter(_) => panic!("called `unpack_schema` on Parameter(..)"),
-            ResolveTarget::Response(_) => panic!("called `unpack_schema` on Response(..)"),
-            ResolveTarget::RequestBody(_) => panic!("called `unpack_schema` on RequestBody(..)"),
+            ResolveTarget::Parameter(inner) => (*inner).map(Self::type_erase),
+            ResolveTarget::Response(inner) => (*inner).map(Self::type_erase),
+            ResolveTarget::RequestBody(inner) => (*inner).map(Self::type_erase),
         }
     }
 
     /// Clones the inner Parameter. Panics if `self` is not `Some(Parameter)`
     fn unpack_parameter(&self) -> Parameter {
         match self {
-            ResolveTarget::Schema(_) => panic!("called `unpack_parameter` on Schema(..)"),
             ResolveTarget::Parameter(parameter) => {
                 match parameter.expect("called `unpack_parameter` on Parameter(None)") {
                     RefOr::Ref(_) => panic!("called `unpack_parameter` on Parameter(Ref(..))"),
@@ -125,7 +107,6 @@ impl ResolveTarget<'_> {
     /// Clones the inner Response. Panics if `self` is not `Some(Response)`
     fn unpack_responses(&self) -> Response {
         match self {
-            ResolveTarget::Schema(_) => panic!("called `unpack_responses` on Schema(..)"),
             ResolveTarget::Parameter(_) => panic!("called `unpack_responses` on Parameter(..)"),
             ResolveTarget::Response(responses) => {
                 match responses.expect("called `unpack_responses` on Responses(None)") {
@@ -140,7 +121,6 @@ impl ResolveTarget<'_> {
     /// Clones the inner RequestBody. Panics if `self` is not `Some(RequestBody)`
     fn unpack_request_body(&self) -> RequestBody {
         match self {
-            ResolveTarget::Schema(_) => panic!("called `unpack_request_body` on Schema(..)"),
             ResolveTarget::Parameter(_) => panic!("called `unpack_request_body` on Parameter(..)"),
             ResolveTarget::Response(_) => panic!("called `unpack_request_body` on Response(..)"),
             ResolveTarget::RequestBody(request_body) => {
@@ -160,9 +140,6 @@ pub(crate) fn resolve<'a>(
     Ok(match input.inner() {
         Some(RefOr::Ref(reference)) => resolve_reference(&reference.reference, components)?,
         Some(RefOr::Object(_)) => match input {
-            ResolveTarget::Schema(_) => {
-                Some(ResolvedReference::Schema(Cow::Owned(input.unpack_schema())))
-            }
             ResolveTarget::Parameter(_) => Some(ResolvedReference::Parameter(Cow::Owned(
                 input.unpack_parameter(),
             ))),
@@ -190,7 +167,7 @@ pub(crate) fn resolve_reference<'a>(
     components: &'a Components,
 ) -> Result<Option<ResolvedReference<'a>>> {
     // The first one is #, the second one is components
-    let mut split = reference.split("/").skip(2);
+    let mut split = reference.split('/').skip(2);
     let component = split
         .next()
         .ok_or_else(|| anyhow!("no component name found in \"{}\"", reference))?;
