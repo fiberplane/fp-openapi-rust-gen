@@ -109,24 +109,22 @@ fn generate_client_method(server: &Server, writer: &mut BufWriter<File>) -> Resu
         .iter()
         .map(|(name, server)| {
             let snake_name = name.to_case(Case::Snake);
-            format!(
-                "let {} = {}.unwrap_or(\"{}\");",
-                snake_name, snake_name, server.default
-            )
+            let default = &server.default;
+            format!("let {snake_name} = {snake_name}.unwrap_or(\"{default}\");")
         })
         .collect();
 
     let variables = variables.join("\n    ");
 
     if !server.variables.is_empty() {
-        writeln!(writer, "    {}", variables)?;
+        writeln!(writer, "    {variables}")?;
 
         let format_args: Vec<String> = server
             .variables
-            .iter()
-            .map(|(name, _)| {
+            .keys()
+            .map(|name| {
                 let snake_name = name.to_case(Case::Snake);
-                format!("{} = {}", snake_name, snake_name)
+                format!("{snake_name} = {snake_name}")
             })
             .collect();
 
