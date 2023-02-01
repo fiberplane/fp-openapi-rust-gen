@@ -86,9 +86,15 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
 
     add_dependencies(&mut manifest.dependencies, args)?;
 
-    let serialized = toml::to_string(&manifest).context("Failed to serialize `Cargo.toml`")?;
+    // workaround for "values must be emitted before tables" error which happens for some people
+    // https://gitlab.com/crates.rs/cargo_toml/-/issues/3#note_687730489
+    let value =
+        toml::Value::try_from(&manifest).context("Failed to convert `Cargo.toml` to toml value")?;
+    let serialized =
+        toml::to_string(&value).context("Failed to serialize `Cargo.toml` value to string")?;
+
     file.write_all(serialized.as_bytes())
-        .context("Failed to write `Cargo.toml`")?;
+        .context("Failed to write `Cargo.toml` to disk")?;
 
     Ok(())
 }
