@@ -86,11 +86,7 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
     }
 
     if let Some(description) = args.description.as_ref() {
-        package_metadata.description = if args.workspace {
-            Some(Inheritable::Inherited { workspace: true })
-        } else {
-            Some(Inheritable::Set(description.clone()))
-        }
+        package_metadata.description = Some(Inheritable::Set(description.clone()));
     }
 
     if let Some(readme) = args.readme.as_ref() {
