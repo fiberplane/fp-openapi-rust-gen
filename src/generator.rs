@@ -42,7 +42,7 @@ pub(crate) fn generate_crate(document: OpenApi, path: &Path, args: &Args) -> Res
 
     if let Some(components) = document.components {
         //generate_models(&components, &src_directory)?;
-        generate_routes(&document.paths, &src_directory, &components)?;
+        generate_routes(&document.paths, &src_directory, &components, &args.models)?;
     }
 
     Ok(())
@@ -90,11 +90,8 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
     }
 
     if let Some(readme) = args.readme.as_ref() {
-        package_metadata.readme = if args.workspace {
-            Inheritable::Inherited { workspace: true }
-        } else {
-            Inheritable::Set(OptionalFile::Path(Path::new(readme).to_path_buf()))
-        }
+        package_metadata.readme =
+            Inheritable::Set(OptionalFile::Path(Path::new(readme).to_path_buf()));
     }
 
     if let Some(documentation) = args.documentation.as_ref() {

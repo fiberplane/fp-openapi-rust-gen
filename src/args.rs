@@ -11,6 +11,12 @@ pub struct Args {
     #[clap(short, long, parse(from_os_str), required = true)]
     pub output: PathBuf,
 
+    /// List of all model paths which should be included.
+    /// Every single one will be prefixed with `use ` and included in a private, crate only module.
+    /// Multiple values may be passed as multiple args or as one with `;` delimiter.
+    #[clap(long, required = true, value_delimiter = ';')]
+    pub models: Vec<String>,
+
     /// Force overwriting of crate path if it exists
     #[clap(short, long)]
     pub force: bool,
@@ -28,7 +34,6 @@ pub struct Args {
     #[clap(long)]
     pub description: Option<String>,
     /// Optional readme path string to include in the generated Cargo file.
-    /// Will inherit from workspace if `workspace` is `true`.
     #[clap(long)]
     pub readme: Option<String>,
     /// Optional documentation url to include in the generated Cargo file.
