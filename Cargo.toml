@@ -2,8 +2,11 @@
 name = "fp-openapi-rust-gen"
 version = "0.0.1"
 edition = "2021"
-authors = ["Fiberplane team <hello@fiberplane.com>"]
-publish = false
+description = "Fiberplane Rust client generator for OpenAPI"
+authors = ["Fiberplane <info@fiberplane.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fiberplane/fp-openapi-rust-gen"
+msrv = "1.58.1"
 
 [dependencies]
 anyhow = "1.0.66"
