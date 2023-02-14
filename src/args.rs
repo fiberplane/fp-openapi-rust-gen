@@ -21,18 +21,22 @@ pub struct Args {
     #[clap(short, long, conflicts_with = "workspace")]
     pub crate_version: Option<String>,
     /// Optional license string to include in the generated Cargo file.
+    /// Will inherit from workspace if `workspace` is `true`.
     #[clap(long)]
     pub license: Option<String>,
     /// Optional description string to include in the generated Cargo file.
     #[clap(long)]
     pub description: Option<String>,
     /// Optional readme path string to include in the generated Cargo file.
+    /// Will inherit from workspace if `workspace` is `true`.
     #[clap(long)]
     pub readme: Option<String>,
     /// Optional documentation url to include in the generated Cargo file.
+    /// Will inherit from workspace if `workspace` is `true`.
     #[clap(long)]
     pub documentation: Option<String>,
     /// Optional repository url to include in the generated Cargo file.
+    /// Will inherit from workspace if `workspace` is `true`.
     #[clap(long)]
     pub repository: Option<String>,
 
