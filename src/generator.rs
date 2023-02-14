@@ -65,11 +65,11 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
 
     let mut manifest = open_manifest(&path)?;
 
-    // Set the version to be the workspace version.
     let mut package_metadata = manifest
         .package
         .as_mut()
         .context("`Cargo.toml` does not contain a [package] section")?;
+
     if args.workspace {
         package_metadata.version = Inheritable::Inherited { workspace: true };
     } else if let Some(version) = args.crate_version.as_ref() {
@@ -81,7 +81,15 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
             Some(Inheritable::Inherited { workspace: true })
         } else {
             Some(Inheritable::Set(license.clone()))
-        };
+        }
+    }
+
+    if let Some(description) = args.description.as_ref() {
+        package_metadata.description = if args.workspace {
+            Some(Inheritable::Inherited { workspace: true })
+        } else {
+            Some(Inheritable::Set(description.clone()))
+        }
     }
 
     add_dependencies(&mut manifest.dependencies, args)?;
