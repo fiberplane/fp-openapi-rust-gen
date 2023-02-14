@@ -26,6 +26,15 @@ pub struct Args {
     /// Optional description string to include in the generated Cargo file.
     #[clap(long)]
     pub description: Option<String>,
+    /// Optional readme path string to include in the generated Cargo file.
+    #[clap(long)]
+    pub readme: Option<String>,
+    /// Optional documentation url to include in the generated Cargo file.
+    #[clap(long)]
+    pub documentation: Option<String>,
+    /// Optional repository url to include in the generated Cargo file.
+    #[clap(long)]
+    pub repository: Option<String>,
 
     /// Whenever fiberplane-rs dependencies are located locally relative to the output crate.
     /// Ignored if `workspace` is `true`.

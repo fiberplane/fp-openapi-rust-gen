@@ -2,9 +2,7 @@ use crate::args::Args;
 use crate::client_config::generate_client_configs;
 use crate::routes::generate_routes;
 use anyhow::{anyhow, bail, Context, Result};
-use cargo_toml::{
-    Dependency, DependencyDetail, DepsSet, Inheritable, InheritedDependencyDetail, Manifest,
-};
+use cargo_toml::{Dependency, DependencyDetail, DepsSet, Inheritable, InheritedDependencyDetail, Manifest, OptionalFile};
 use okapi::openapi3::OpenApi;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -89,6 +87,30 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
             Some(Inheritable::Inherited { workspace: true })
         } else {
             Some(Inheritable::Set(description.clone()))
+        }
+    }
+
+    if let Some(readme) = args.readme.as_ref() {
+        package_metadata.readme = if args.workspace {
+            Inheritable::Inherited { workspace: true }
+        } else {
+            Inheritable::Set(OptionalFile::Path(Path::new(readme).to_path_buf()))
+        }
+    }
+
+    if let Some(documentation) = args.documentation.as_ref() {
+        package_metadata.documentation = if args.workspace {
+            Some(Inheritable::Inherited { workspace: true })
+        } else {
+            Some(Inheritable::Set(documentation.clone()))
+        }
+    }
+
+    if let Some(repository) = args.repository.as_ref() {
+        package_metadata.repository = if args.workspace {
+            Some(Inheritable::Inherited { workspace: true })
+        } else {
+            Some(Inheritable::Set(repository.clone()))
         }
     }
 
