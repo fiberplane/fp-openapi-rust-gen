@@ -90,7 +90,8 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
     }
 
     if let Some(readme) = args.readme.as_ref() {
-        package_metadata.readme = Inheritable::Set(OptionalFile::Path(Path::new(readme).to_path_buf()));
+        package_metadata.readme =
+            Inheritable::Set(OptionalFile::Path(Path::new(readme).to_path_buf()));
     }
 
     if let Some(documentation) = args.documentation.as_ref() {

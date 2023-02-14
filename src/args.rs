@@ -14,7 +14,7 @@ pub struct Args {
     /// List of all model paths which should be included.
     /// Every single one will be prefixed with `use ` and included in a private, crate only module.
     /// Multiple values may be passed as multiple args or as one with `;` delimiter.
-    #[clap(required = true, value_delimiter = ";")]
+    #[clap(required = true, value_delimiter = ';')]
     pub models: Vec<String>,
 
     /// Force overwriting of crate path if it exists
