@@ -20,6 +20,7 @@ pub(crate) fn generate_routes(
     paths: &Map<String, PathItem>,
     src_path: &Path,
     components: &Components,
+    models: &[String],
 ) -> Result<()> {
     let path = src_path.join("lib.rs");
 
@@ -48,33 +49,13 @@ pub(crate) fn generate_routes(
 
     writeln!(writer, "pub mod builder;")?;
     writeln!(writer, "pub mod clients;\n")?;
-    //write!(writer, "pub mod models;\n\n")?;
 
     writeln!(writer, "pub(crate) mod models {{")?;
-    writeln!(writer, "    pub use fiberplane_models::notebooks::*;")?;
-    writeln!(
-        writer,
-        "    pub use fiberplane_models::notebooks::operations::*;"
-    )?;
-    writeln!(writer, "    pub use fiberplane_models::blobs::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::comments::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::data_sources::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::events::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::files::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::formatting::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::labels::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::names::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::proxies::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::query_data::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::realtime::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::snippets::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::sorting::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::templates::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::timestamps::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::tokens::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::users::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::views::*;")?;
-    writeln!(writer, "    pub use fiberplane_models::workspaces::*;")?;
+
+    for model in models {
+        writeln!(writer, "    pub(crate) use {model};")?;
+    }
+
     writeln!(writer, "}}\n")?;
 
     for (endpoint, item) in paths {
