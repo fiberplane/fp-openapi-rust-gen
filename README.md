@@ -13,7 +13,7 @@ The main differences are:
 
 ## Getting Help
 
-Please see [COMMUNITY.md](COMMUNITY.md) for ways to reach out to us.
+Please see [COMMUNITY.md][fp-com] for ways to reach out to us.
 
 ## Contributing
 
@@ -21,7 +21,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Code of Conduct
 
-See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+See [CODE_OF_CONDUCT.md][fp-coc].
 
 ## License
 
@@ -34,3 +34,5 @@ See [LICENSE-APACHE](LICENSE-APACHE.txt) and [LICENSE-MIT](LICENSE-MIT.txt).
 [1]: https://github.com/fiberplane/fp-openapi-rust-gen/issues
 [2]: (https://github.com/fiberplane/fp-openapi-rust-gen/discussions)
 
+[fp-com]: https://github.com/fiberplane/fiberplane/blob/main/COMMUNITY.md
+[fp-coc]: https://github.com/fiberplane/fiberplane/blob/main/CODE_OF_CONDUCT.md
