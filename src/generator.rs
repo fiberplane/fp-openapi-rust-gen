@@ -4,6 +4,7 @@ use crate::routes::generate_routes;
 use anyhow::{anyhow, bail, Context, Result};
 use cargo_toml::{
     Dependency, DependencyDetail, DepsSet, Inheritable, InheritedDependencyDetail, Manifest,
+    OptionalFile,
 };
 use okapi::openapi3::OpenApi;
 use std::fs::OpenOptions;
@@ -65,11 +66,11 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
 
     let mut manifest = open_manifest(&path)?;
 
-    // Set the version to be the workspace version.
     let mut package_metadata = manifest
         .package
         .as_mut()
         .context("`Cargo.toml` does not contain a [package] section")?;
+
     if args.workspace {
         package_metadata.version = Inheritable::Inherited { workspace: true };
     } else if let Some(version) = args.crate_version.as_ref() {
@@ -81,7 +82,39 @@ fn edit_cargo_toml(path: &Path, args: &Args) -> Result<()> {
             Some(Inheritable::Inherited { workspace: true })
         } else {
             Some(Inheritable::Set(license.clone()))
-        };
+        }
+    }
+
+    if let Some(description) = args.description.as_ref() {
+        package_metadata.description = if args.workspace {
+            Some(Inheritable::Inherited { workspace: true })
+        } else {
+            Some(Inheritable::Set(description.clone()))
+        }
+    }
+
+    if let Some(readme) = args.readme.as_ref() {
+        package_metadata.readme = if args.workspace {
+            Inheritable::Inherited { workspace: true }
+        } else {
+            Inheritable::Set(OptionalFile::Path(Path::new(readme).to_path_buf()))
+        }
+    }
+
+    if let Some(documentation) = args.documentation.as_ref() {
+        package_metadata.documentation = if args.workspace {
+            Some(Inheritable::Inherited { workspace: true })
+        } else {
+            Some(Inheritable::Set(documentation.clone()))
+        }
+    }
+
+    if let Some(repository) = args.repository.as_ref() {
+        package_metadata.repository = if args.workspace {
+            Some(Inheritable::Inherited { workspace: true })
+        } else {
+            Some(Inheritable::Set(repository.clone()))
+        }
     }
 
     add_dependencies(&mut manifest.dependencies, args)?;
