@@ -130,7 +130,7 @@ fn generate_route(
     components: &Components,
 ) -> Result<()> {
     if let Some(description) = &operation.description {
-        writeln!(writer, "/// {}", description)?;
+        writeln!(writer, "#[doc = r#\"{}\"#]", description)?;
     }
 
     let method_name = operation
@@ -152,6 +152,8 @@ fn generate_route(
 
                 match &parameter.value {
                     ParameterValue::Schema { schema, .. } => {
+                        let variable_name = parameter.name.to_case(Case::Snake);
+
                         let type_ = types::map_type(
                             schema.format.as_deref(),
                             schema.instance_type.as_ref(),
@@ -165,8 +167,31 @@ fn generate_route(
                             )
                         })?;
 
+                        const SORT_PARAMETERS: &[&str] = &["sort_by", "sort_direction"];
                         let string: &str = type_.borrow();
-                        write!(writer, "{}", string)?;
+
+                        if string == "&str" {
+                            operation.
+
+
+                            if variable_name == "" {
+                                
+                            }
+
+
+
+                        } else {
+                            write!(writer, "{}", string)?;
+                        }
+
+
+                        // special handling for sorting parameters
+                        if string == "&str" && (variable_name == "sort_by" || variable_name == "sort_direction") {
+
+
+                        } else {
+
+                        }
                     }
                     ParameterValue::Content { .. } => {}
                 }
