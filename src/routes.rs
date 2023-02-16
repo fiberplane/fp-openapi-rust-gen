@@ -130,7 +130,7 @@ fn generate_route(
     components: &Components,
 ) -> Result<()> {
     if let Some(description) = &operation.description {
-        writeln!(writer, "/// {}", description)?;
+        writeln!(writer, "#[doc = r#\"{}\"#]", description)?;
     }
 
     let method_name = operation
