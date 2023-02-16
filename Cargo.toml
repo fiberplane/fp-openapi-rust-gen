@@ -6,7 +6,7 @@ description = "Fiberplane Rust client generator for OpenAPI"
 authors = ["Fiberplane <info@fiberplane.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/fiberplane/fp-openapi-rust-gen"
-msrv = "1.58.1"
+rust-version = "1.58.1"
 
 [dependencies]
 anyhow = "1.0.66"

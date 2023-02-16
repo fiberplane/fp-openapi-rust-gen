@@ -262,10 +262,7 @@ fn generate_route(
 
     write!(writer, ") -> Result<")?;
 
-    // State, TODO: Change this to be a struct or make the whole generation process have state
-    let mut is_json = false;
-    let mut is_none = false;
-    let mut is_text = false;
+    let mut response_type = None;
 
     match resolve(
         ResolveTarget::Response(&operation.responses.responses.get("200")),
@@ -273,7 +270,7 @@ fn generate_route(
     )? {
         Some(ResolvedReference::Responses(response)) => {
             if response.content.is_empty() {
-                is_none = true;
+                response_type = Some(ResponseType::None);
                 write!(writer, "()")?;
             } else if let Some(json_media) = response.content.get("application/json") {
                 let schema = json_media
@@ -315,15 +312,17 @@ fn generate_route(
                     )?;
 
                     if type_ == "()" {
-                        is_none = true;
+                        response_type = Some(ResponseType::None);
                     }
 
                     write!(writer, "{}", type_)?;
                 }
 
-                is_json = true;
+                if response_type.is_none() {
+                    response_type = Some(ResponseType::Json);
+                }
             } else if response.content.get("text/plain").is_some() {
-                is_text = true;
+                response_type = Some(ResponseType::Text);
                 write!(writer, "String")?;
             } else {
                 // octet-stream should be `bytes::Bytes` so don't warn about it when we reach this fallback
@@ -344,7 +343,7 @@ fn generate_route(
         ),
         None => {
             write!(writer, "()")?;
-            is_none = true;
+            response_type = Some(ResponseType::None);
         }
     }
 
@@ -353,7 +352,12 @@ fn generate_route(
     writeln!(writer, "> {{")?;
 
     generate_function_body(
-        endpoint, method, operation, writer, components, is_json, is_none, is_text,
+        endpoint,
+        method,
+        operation,
+        writer,
+        components,
+        response_type,
     )?;
 
     writeln!(writer, "\n}}\n")?;
@@ -361,16 +365,13 @@ fn generate_route(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 fn generate_function_body(
     endpoint: &str,
     method: &str,
     operation: &Operation,
     writer: &mut BufWriter<File>,
     components: &Components,
-    is_json: bool,
-    is_none: bool,
-    is_text: bool,
+    response_type: Option<ResponseType>,
 ) -> Result<()> {
     writeln!(writer, "    let mut builder = client.request(",)?;
     writeln!(writer, "        Method::{method},")?;
@@ -484,24 +485,45 @@ fn generate_function_body(
     write!(writer, "        .error_for_status()?")?;
 
     // Response
-    if is_json {
-        writeln!(writer, "\n        .json()")?;
-        writeln!(writer, "        .await?;\n")?;
-
-        write!(writer, "    Ok(response)")?;
-    } else if is_text {
-        writeln!(writer, "\n        .text()")?;
-        writeln!(writer, "        .await?;\n")?;
-
-        write!(writer, "    Ok(response)")?;
-    } else if is_none {
-        write!(writer, ";\n\n    Ok(())")?;
-    } else {
-        writeln!(writer, "\n        .bytes()")?;
-        writeln!(writer, "        .await?;\n")?;
-
-        write!(writer, "    Ok(response)")?;
-    }
+    write!(
+        writer,
+        "{}",
+        match response_type {
+            Some(response_type) => response_type.generate_response_part(),
+            None => ResponseType::fallback_response_part(),
+        }
+    )?;
 
     Ok(())
+}
+
+#[derive(Debug)]
+enum ResponseType {
+    Json,
+    Text,
+    None,
+}
+
+impl ResponseType {
+    fn generate_response_part(&self) -> &'static str {
+        match self {
+            ResponseType::Json => {
+                // newline, 8 intend, newline, 8 intend, 2x newline, 4 intend
+                "\n        .json()\n        .await?;\n\n    Ok(response)"
+            }
+            ResponseType::Text => {
+                // newline, 8 intend, newline, 8 intend, 2x newline, 4 intend
+                "\n        .text()\n        .await?;\n\n    Ok(response)"
+            }
+            ResponseType::None => {
+                // semicolon, 2x newline, 4 intend
+                ";\n\n    Ok(())"
+            }
+        }
+    }
+
+    fn fallback_response_part() -> &'static str {
+        // newline, 8 intend, newline, 8 intend, 2x newline, 4 intend
+        "\n        .bytes()\n        .await?;\n\n    Ok(response)"
+    }
 }
