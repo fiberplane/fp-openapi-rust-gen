@@ -130,7 +130,7 @@ fn generate_route(
     components: &Components,
 ) -> Result<()> {
     if let Some(description) = &operation.description {
-        writeln!(writer, "#[doc = r#\"{}\"#]", description)?;
+        writeln!(writer, "#[doc = r#\"{description}\"#]")?;
     }
 
     let method_name = operation
@@ -138,7 +138,7 @@ fn generate_route(
         .as_ref()
         .ok_or_else(|| anyhow!("\"{} {}\" does not have operation_id", method, endpoint))?;
 
-    writeln!(writer, "pub async fn {}(", method_name)?;
+    writeln!(writer, "pub async fn {method_name}(")?;
     writeln!(writer, "    client: &ApiClient,")?;
 
     for raw_param in shared_parameters.iter().chain(&operation.parameters) {
@@ -166,7 +166,7 @@ fn generate_route(
                         })?;
 
                         let string: &str = type_.borrow();
-                        write!(writer, "{}", string)?;
+                        write!(writer, "{string}")?;
                     }
                     ParameterValue::Content { .. } => {}
                 }
@@ -201,8 +201,7 @@ fn generate_route(
                         Some(media_type)
                     } else {
                         eprintln!(
-                            "warn: found \"{}\", expected json, form data or octet stream",
-                            content_type
+                            "warn: found \"{content_type}\", expected json, form data or octet stream"
                         );
                         None
                     }
@@ -218,7 +217,7 @@ fn generate_route(
 
             if let Some(reference) = &schema.reference {
                 let reference = reference_name_to_models_path(reference);
-                writeln!(writer, "    payload: {}", reference)?;
+                writeln!(writer, "    payload: {reference}")?;
             } else if let Some(array) = &schema.array {
                 let items = array
                     .items
@@ -235,7 +234,7 @@ fn generate_route(
                                 true,
                             )?;
 
-                            writeln!(writer, "    payload: Vec<{}>", type_)?;
+                            writeln!(writer, "    payload: Vec<{type_}>")?;
                         }
                         Schema::Bool(_) => bail!("simple boolean Vec is unsupported"),
                     },
@@ -250,7 +249,7 @@ fn generate_route(
                     true,
                 )?;
 
-                writeln!(writer, "    payload: {},", type_)?;
+                writeln!(writer, "    payload: {type_},")?;
             }
         }
         Some(resolved) => bail!(
@@ -295,13 +294,13 @@ fn generate_route(
                                     schema.reference.as_deref(),
                                     false,
                                 )?;
-                                write!(writer, "Vec<{}>", type_)?;
+                                write!(writer, "Vec<{type_}>")?;
                             }
                         },
                         Some(SingleOrVec::Vec(vec)) => {
-                            eprintln!("unsupported multiple items vec {:?}", vec)
+                            eprintln!("unsupported multiple items vec {vec:?}")
                         }
-                        None => eprintln!("type is array but has no items? {:?}", schema),
+                        None => eprintln!("type is array but has no items? {schema:?}"),
                     }
                 } else {
                     let type_ = map_type(
@@ -315,7 +314,7 @@ fn generate_route(
                         response_type = Some(ResponseType::None);
                     }
 
-                    write!(writer, "{}", type_)?;
+                    write!(writer, "{type_}")?;
                 }
 
                 if response_type.is_none() {
@@ -329,8 +328,7 @@ fn generate_route(
                 if response.content.get("application/octet-stream").is_none() {
                     let keys: Vec<_> = response.content.keys().collect();
                     eprintln!(
-                        "warn: unknown response mime type(s), falling back to `bytes::Bytes`: {:?}",
-                        keys
+                        "warn: unknown response mime type(s), falling back to `bytes::Bytes`: {keys:?}"
                     );
                 }
 
@@ -389,7 +387,7 @@ fn generate_function_body(
     }
 
     if !arguments.is_empty() {
-        write!(writer, "        &format!(\"{}\", ", endpoint)?;
+        write!(writer, "        &format!(\"{endpoint}\", ")?;
 
         for arg in arguments {
             write!(writer, "{} = {}, ", arg, arg.to_case(Case::Snake))?;
@@ -397,7 +395,7 @@ fn generate_function_body(
 
         write!(writer, ")")?;
     } else {
-        write!(writer, "        \"{}\"", endpoint)?;
+        write!(writer, "        \"{endpoint}\"")?;
     }
 
     writeln!(writer, "\n    )?;")?;
@@ -416,8 +414,7 @@ fn generate_function_body(
                     if !parameter.required {
                         writeln!(
                             writer,
-                            "    if let Some({}) = {} {{",
-                            parameter_name, parameter_name
+                            "    if let Some({parameter_name}) = {parameter_name} {{",
                         )?;
                     }
 
@@ -437,9 +434,9 @@ fn generate_function_body(
 
                         // special handling for `time::OffsetDateTime`
                         if type_ == "time::OffsetDateTime" {
-                            parameter_name = format!("{}.format(&Rfc3339)?", parameter_name)
+                            parameter_name = format!("{parameter_name}.format(&Rfc3339)?")
                         } else if type_ == "std::collections::HashMap<String, String>" {
-                            parameter_name = format!("serde_json::to_string(&{})?", parameter_name)
+                            parameter_name = format!("serde_json::to_string(&{parameter_name})?")
                         }
                     }
 
@@ -453,7 +450,7 @@ fn generate_function_body(
                         writeln!(writer, "    }}")?;
                     }
                 }
-                location => eprintln!("unknown `in`: {}", location),
+                location => eprintln!("unknown `in`: {location}"),
             }
         }
     }
