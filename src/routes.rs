@@ -42,10 +42,6 @@ pub(crate) fn generate_routes(
     writeln!(writer, "use anyhow::{{Context as _, Result}};")?;
     writeln!(writer, "use crate::clients::ApiClient;")?;
     writeln!(writer, "use reqwest::Method;")?;
-    writeln!(
-        writer,
-        "use time::format_description::well_known::Rfc3339;\n"
-    )?;
 
     writeln!(writer, "pub mod builder;")?;
     writeln!(writer, "pub mod clients;\n")?;
@@ -432,9 +428,9 @@ fn generate_function_body(
                             )
                         })?;
 
-                        // special handling for `time::OffsetDateTime`
-                        if type_ == "time::OffsetDateTime" {
-                            parameter_name = format!("{parameter_name}.format(&Rfc3339)?")
+                        // special handling for types that need to be converted to strings
+                        if type_ == "fiberplane_models::timestamps::Timestamp" {
+                            parameter_name = format!("{parameter_name}.to_string()")
                         } else if type_ == "std::collections::HashMap<String, String>" {
                             parameter_name = format!("serde_json::to_string(&{parameter_name})?")
                         }
