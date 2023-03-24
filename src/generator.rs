@@ -176,27 +176,12 @@ fn add_dependencies(dependencies: &mut DepsSet, args: &Args) -> Result<()> {
         fp_dependency("fiberplane-models", args, Vec::new()),
     );
 
-    // time
-    dependencies.insert(
-        "time".to_owned(),
-        Dependency::Detailed(DependencyDetail {
-            features: vec![
-                "formatting".to_owned(),
-                "parsing".to_owned(),
-                "serde-human-readable".to_owned(),
-                "serde-well-known".to_owned(),
-            ],
-            version: Some("0.3".to_owned()),
-            ..Default::default()
-        }),
-    );
-
     dependencies.insert("bytes".to_string(), Dependency::Simple("1".to_string()));
 
     Ok(())
 }
 
-/// declare a dependency which lives within the fiberplane-rs repository
+/// declare a dependency which lives within the fiberplane repository
 fn fp_dependency(name: &str, args: &Args, features: Vec<String>) -> Dependency {
     if args.workspace {
         Dependency::Inherited(InheritedDependencyDetail {
@@ -214,7 +199,7 @@ fn fp_dependency(name: &str, args: &Args, features: Vec<String>) -> Dependency {
     } else {
         Dependency::Detailed(DependencyDetail {
             features,
-            git: Some("ssh://git@github.com/fiberplane/fiberplane-rs.git".to_owned()),
+            git: Some("ssh://git@github.com/fiberplane/fiberplane.git".to_owned()),
             branch: Some("main".to_owned()),
             ..Default::default()
         })
