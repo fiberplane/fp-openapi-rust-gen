@@ -1,4 +1,4 @@
-# Fiberplane OpenAPI Rust Client Generator
+# ⚠️ This project has been moved to https://github.com/fiberplane/fiberplane
 
 `fp-openapi-rust-gen` is a tool to generate Rust client code from OpenAPI 3.0 specifications.
 It was created as an in-house replacement for the [OpenAPI Tools openapi-generator][0] with a feature set
